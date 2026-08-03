@@ -1,7 +1,8 @@
+(* Print Assumptions over every result of Av1324.v. *)
+
 Require Import List ZArith.
 Import ListNotations.
 Require Import Av1324.
-(* Av1324 leaves Z_scope and Q_scope open; every numeral below is a nat. *)
 Open Scope nat_scope.
 Print Assumptions max_insertion.
 Print Assumptions append_1324.
@@ -943,3 +944,19 @@ Print Assumptions dA_dec_pos.
 Print Assumptions pqd_diag_top.
 Compute (insword 3 0 2 (decpat 3)).
 Compute (map (fun l => dA 2 3 l) (gen132 3)).
+
+(* ---- the m = 5 computations ---- *)
+Print Assumptions domino_5.
+Print Assumptions tromino_count_3.
+Print Assumptions tromino_3.
+Print Assumptions tromino_5.
+Print Assumptions chebyshevZ_upto_5.
+Print Assumptions chebyshev_le_5.
+
+(* ---- Targets: the six open statements ---- *)
+Print Assumptions two_term_law.
+Print Assumptions p_degree_pattern.
+Print Assumptions q_degree_pattern.
+Print Assumptions R_at_minus_one.
+Print Assumptions exponent_law.
+Print Assumptions av1324_not_Precursive.

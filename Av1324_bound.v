@@ -31,3 +31,6 @@ Proof.
   - apply Rlt_le. apply exp_increasing. exact Hlt.
   - rewrite Heq. apply Rle_refl.
 Qed.
+
+Print Assumptions staircase_certificate.
+Print Assumptions staircase_bound.
