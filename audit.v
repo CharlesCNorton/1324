@@ -974,3 +974,150 @@ Print Assumptions Ddiag_le_dec.
 Print Assumptions Ddiag_sandwich.
 Compute (map (fun M => (Nsig 2 M [0; 1], (binomN (2 * M) M + 4 ^ M) / 2)%nat)
               (seq 0 5)).
+
+(* ---- the decreasing suffix fibre's two-term law ---- *)
+Print Assumptions Qcancel_l.
+Print Assumptions Qn_le.
+Print Assumptions nth_padd.
+Print Assumptions binomN_absorb.
+Print Assumptions plin_spec.
+Print Assumptions plin_len.
+Print Assumptions pdec_len.
+Print Assumptions pdec_binom.
+Print Assumptions pdec_lead.
+Print Assumptions Nsig_dec_two_term.
+Print Assumptions pdec_one_diagonal.
+Print Assumptions diagonal_ge_dec.
+Print Assumptions diagonal_le_dec.
+(* (M+1) p_dec(M) against C(M+d,d) at d = 3, and the fibre itself *)
+Compute (map (fun M => Nsig 3 M (decpat 3)) (seq 0 4)).
+Compute (map (fun M => (binomN (M + 3) 3, binomN (M + 4) 4)) (seq 0 5)).
+Compute (pdec 1, pdec 2, pdec 3).
+
+(* ---- the d = 2 increasing fibre as a recurrence ---- *)
+Print Assumptions central_step.
+Print Assumptions Nsig_two_zero.
+Print Assumptions nsig_two_closed_of_rec.
+Print Assumptions nsig_two_rec_of_closed.
+Print Assumptions diagonal_two_rec.
+(* N_01(M+1) + Cat(M) against 4 N_01(M) *)
+Compute (map (fun M => (Nsig 2 (S M) [0; 1] + card132 M,
+                        4 * Nsig 2 M [0; 1])%nat) (seq 0 4)).
+
+(* ---- the two-term law fibre by fibre ---- *)
+Print Assumptions nth_repeat0.
+Print Assumptions polyQ_app_zeros.
+Print Assumptions ppad_len.
+Print Assumptions ppad_spec.
+Print Assumptions psum_len_le.
+Print Assumptions psum_map_spec.
+Print Assumptions Qn_fold_nat.
+Print Assumptions fold_law_split.
+Print Assumptions dpfib_len.
+Print Assumptions dqfib_len.
+Print Assumptions dfib_law.
+Print Assumptions two_term_law_of_fibres.
+Print Assumptions sqzero_len.
+Print Assumptions sqzero_spec.
+Print Assumptions fibre_law_dec.
+
+(* ---- the level-1 claim and R_at_minus_one, fibre by fibre ---- *)
+Print Assumptions binomN_zero_above.
+Print Assumptions binomN_diag.
+Print Assumptions pdec_at_zero.
+Print Assumptions nth_ppad.
+Print Assumptions nth_psum_map.
+Print Assumptions foldQ_zero.
+Print Assumptions foldQ_pick.
+Print Assumptions foldQ_sub.
+Print Assumptions decpat_in_gen.
+Print Assumptions fibres_p_lead.
+Print Assumptions fibres_at_minus_one.
+Print Assumptions dp_of_fibres.
+Print Assumptions dq_of_fibres.
+
+(* ---- d = 2 through the fibre decomposition ---- *)
+Print Assumptions gen_two.
+Print Assumptions P2_dec.
+Print Assumptions Q2_dec.
+Print Assumptions P2_len.
+Print Assumptions Q2_len.
+Print Assumptions P2_law.
+Print Assumptions diagonal_two_fib.
+Print Assumptions p_lead_two.
+Print Assumptions R_at_minus_one_two.
+Print Assumptions R_at_minus_one_of_two.
+Compute (dpfib 2 P2, dqfib 2 Q2).
+
+(* ---- the diagonal's coefficients as fibre sums, and d = 1 ---- *)
+Print Assumptions nth_dpfib.
+Print Assumptions nth_dqfib.
+Print Assumptions sqzero_nth.
+Print Assumptions gen_one.
+Print Assumptions decpat_one.
+Print Assumptions P1_len.
+Print Assumptions Q1_len.
+Print Assumptions P1_law.
+Print Assumptions diagonal_one_fib.
+Print Assumptions dpfib_one.
+Print Assumptions dqfib_one.
+Print Assumptions qlead0_len.
+Print Assumptions q_lead_two.
+Print Assumptions p_lead_two_poly.
+Compute (dpfib 1 P1, dqfib 1 Q1).
+
+(* ---- the top backward difference, and [s^0] R_d ---- *)
+Print Assumptions delta_top.
+Print Assumptions rcoef_zero.
+Print Assumptions rcoef_zero_catalan.
+Print Assumptions pow2_pos.
+Print Assumptions binomN_le_pow2.
+Print Assumptions pow2_pow4.
+Print Assumptions binomN_le_pow4.
+Print Assumptions card132_le_pow4.
+Print Assumptions Qn_pos.
+Print Assumptions exponent_law_at_zero.
+(* Cat(m) against 4^m, the bound [s^0] R_d is read against *)
+Compute (map (fun m => (card132 m, Nat.pow 4 m)) (seq 0 6)).
+
+(* ---- d_A decreasing under inclusion of the shared cell's ascent set ---- *)
+Print Assumptions locell_132_pos.
+Print Assumptions rank_of_mask_hi.
+Print Assumptions rank_of_mask.
+Print Assumptions swaplo_spec.
+Print Assumptions swaplo_perm.
+Print Assumptions swaplo_in.
+Print Assumptions dA_ascent_mono.
+Print Assumptions dA_le_dec_of_mono.
+Compute (swaplo 3 (decpat 3) (insword 3 0 2 (decpat 3))).
+
+(* ---- the capped profile state, its transition and the transfer ---- *)
+Print Assumptions after_dec.
+Print Assumptions has_below_dec.
+Print Assumptions new_three_after.
+Print Assumptions after_append.
+Print Assumptions has_below_append.
+Print Assumptions dec_true.
+Print Assumptions bool_iff_eq.
+Print Assumptions pabs_append.
+Print Assumptions bump_lt_thresh.
+Print Assumptions bump_eq_iff.
+Print Assumptions unbump_le_iff.
+Print Assumptions three_value_map_bump.
+Print Assumptions has_below_map_bump.
+Print Assumptions after_map_bump.
+Print Assumptions pabs_map_bump.
+Print Assumptions pabs_ext.
+Print Assumptions three_value_in.
+Print Assumptions plegal_correct.
+Print Assumptions slist_step.
+Print Assumptions expand_addmul.
+Print Assumptions expand_compress.
+Print Assumptions expand_compressw.
+Print Assumptions total_expand.
+Print Assumptions pabs_nil.
+Print Assumptions slev_eq.
+Print Assumptions transfer_card.
+(* the transfer against card, and the compression it buys *)
+Compute (length (slev 5 5), card 5).
+Compute (length (slev 6 6), tcard 6 6, length (tlev 6 6)).
