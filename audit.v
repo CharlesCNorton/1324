@@ -960,3 +960,17 @@ Print Assumptions q_degree_pattern.
 Print Assumptions R_at_minus_one.
 Print Assumptions exponent_law.
 Print Assumptions av1324_not_Precursive.
+
+(* ---- the d = 2 diagonal, and the diagonal against its decreasing fibre ---- *)
+Print Assumptions perm_two_cases.
+Print Assumptions Ddiag_two.
+Print Assumptions binomN_one_val.
+Print Assumptions binomN_two_val.
+Print Assumptions Ddiag_two_closed.
+Print Assumptions diagonal_two.
+Print Assumptions fold_Nsig_le.
+Print Assumptions suffix_pat_in_gen.
+Print Assumptions Ddiag_le_dec.
+Print Assumptions Ddiag_sandwich.
+Compute (map (fun M => (Nsig 2 M [0; 1], (binomN (2 * M) M + 4 ^ M) / 2)%nat)
+              (seq 0 5)).

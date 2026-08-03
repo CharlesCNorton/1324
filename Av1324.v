@@ -8902,12 +8902,36 @@ Proof. rewrite <- Dcountf_eq. vm_compute. reflexivity. Qed.
 Theorem tromino_4 : Tz 4 = 6949612%Z.
 Proof. rewrite <- Tzf_eq. vm_compute. reflexivity. Qed.
 
-(* Unconditionally, at every size the enumeration reaches.  At m = 4 this reads
-   9751^2 = 95082001 against 14 * 6949612 = 97294568. *)
+(* The test read off values already computed, so the enumeration is not
+   repeated inside it. *)
+Lemma chebyshevZ_of_vals : forall m D T c,
+  Z.of_nat (Dcount m m) = D -> Tz m = T -> card132 m = c ->
+  Z.leb (D * D) (Z.of_nat c * T) = true -> chebyshev_holdsZ m = true.
+Proof.
+  intros m D T c HD HT Hc H. unfold chebyshev_holdsZ.
+  rewrite HD, HT, Hc. exact H.
+Qed.
+
+Lemma card132_4_val : card132 4 = 14%nat.
+Proof. vm_compute. reflexivity. Qed.
+
+(* 9751^2 = 95082001 against 14 * 6949612 = 97294568 *)
+Lemma chebyshevZ_4 : chebyshev_holdsZ 4 = true.
+Proof.
+  apply (chebyshevZ_of_vals 4 9751 6949612 14
+           domino_4 tromino_4 card132_4_val).
+  reflexivity.
+Qed.
+
 Theorem chebyshev_upto_4 : forall m, (m <= 4)%nat -> chebyshev_holds m = true.
 Proof.
-  intros m Hm. rewrite <- chebyshev_holdsZ_eq, <- chebyshev_holdsZf_eq.
-  destruct m as [|[|[|[|[|m]]]]]; try lia; vm_compute; reflexivity.
+  intros m Hm. rewrite <- chebyshev_holdsZ_eq.
+  destruct m as [|[|[|[|[|m]]]]]; try lia.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - exact chebyshevZ_4.
 Qed.
 
 Corollary chebyshev_le_4 : forall m, (m <= 4)%nat ->
@@ -12143,10 +12167,10 @@ Qed.
 
 (* The two counts, at the sizes the enumeration reaches. *)
 Theorem tromino_count_1 : Tromino 1 = Tcount 1.
-Proof. rewrite <- Trominof_eq. vm_compute. reflexivity. Qed.
+Proof. apply tromino_eq_Tcount. Qed.
 
 Theorem tromino_count_2 : Tromino 2 = Tcount 2.
-Proof. rewrite <- Trominof_eq. vm_compute. reflexivity. Qed.
+Proof. apply tromino_eq_Tcount. Qed.
 
 (* ------------------------------------------------------------------ *)
 (* The decreasing lower cell is the unique maximiser of d_A.  Insert the
@@ -13401,22 +13425,38 @@ Open Scope nat_scope.
 Theorem domino_5 : Z.of_nat (Dcount 5 5) = 255642%Z.
 Proof. rewrite <- Dcountf_eq. vm_compute. reflexivity. Qed.
 
-(* Tcount at the balanced tromino of size 3, against the gridded permutations
-   of [0,9) themselves: 36325 both ways. *)
 Theorem tromino_count_3 : Tromino 3 = Tcount 3.
-Proof. rewrite <- Trominof_eq. vm_compute. reflexivity. Qed.
+Proof. apply tromino_eq_Tcount. Qed.
 
 Theorem tromino_3 : Z.of_nat (Tromino 3) = 36325%Z.
-Proof. rewrite <- Trominof_eq. vm_compute. reflexivity. Qed.
+Proof.
+  rewrite tromino_eq_Tcount, <- Tz_eq, <- Tzf_eq. vm_compute. reflexivity.
+Qed.
 
 Theorem tromino_5 : Tz 5 = 1615228302%Z.
 Proof. rewrite <- Tzf_eq. vm_compute. reflexivity. Qed.
 
-(* At m = 5: 255642^2 = 65352832164 against 42 * 1615228302 = 67839588684. *)
+Lemma card132_5_val : card132 5 = 42%nat.
+Proof. vm_compute. reflexivity. Qed.
+
+(* 255642^2 = 65352832164 against 42 * 1615228302 = 67839588684 *)
+Lemma chebyshevZ_5 : chebyshev_holdsZ 5 = true.
+Proof.
+  apply (chebyshevZ_of_vals 5 255642 1615228302 42
+           domino_5 tromino_5 card132_5_val).
+  reflexivity.
+Qed.
+
 Theorem chebyshevZ_upto_5 : forall m, (m <= 5)%nat -> chebyshev_holdsZ m = true.
 Proof.
-  intros m Hm. rewrite <- chebyshev_holdsZf_eq.
-  destruct m as [|[|[|[|[|[|m]]]]]]; try lia; vm_compute; reflexivity.
+  intros m Hm.
+  destruct m as [|[|[|[|[|[|m]]]]]]; try lia.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - exact chebyshevZ_4.
+  - exact chebyshevZ_5.
 Qed.
 
 Corollary chebyshev_le_5 : forall m, (m <= 5)%nat ->
@@ -13425,4 +13465,158 @@ Corollary chebyshev_le_5 : forall m, (m <= 5)%nat ->
 Proof.
   intros m Hm. apply chebyshev_holds_spec.
   rewrite <- chebyshev_holdsZ_eq. apply chebyshevZ_upto_5. exact Hm.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The d = 2 diagonal.  Only two suffix patterns occur, the decreasing one is
+   Nsig_dec, and the whole of the case sits in the increasing fibre. *)
+
+Lemma perm_two_cases : forall l, is_perm l 2 -> l = [0; 1] \/ l = [1; 0].
+Proof.
+  intros l [Hlen [Hnd Hb]].
+  destruct l as [|a [|b [|c l]]]; cbn [length] in Hlen; try discriminate.
+  assert (Ha : a < 2) by (apply Hb; left; reflexivity).
+  assert (Hbb : b < 2) by (apply Hb; right; left; reflexivity).
+  assert (Hab : a <> b).
+  { inversion Hnd as [|x xs Hni Hr Heq]; subst. intro E. apply Hni. left.
+    symmetry. exact E. }
+  destruct a as [|[|a]]; destruct b as [|[|b]]; try lia;
+    first [left; reflexivity | right; reflexivity].
+Qed.
+
+Lemma decpat_two : decpat 2 = [1; 0].
+Proof. reflexivity. Qed.
+
+Theorem Ddiag_two : forall M,
+  Ddiag 2 M = (binomN (M + 2) 2 * card132 M + Nsig 2 M [0; 1])%nat.
+Proof.
+  intro M.
+  assert (Hcov : forall w,
+            In w (filter (fun w => avoids132b (firstn M w)) (gen (M + 2))) ->
+            In (suffix_pat 2 w) [[1; 0]; [0; 1]]).
+  { intros w Hw. apply filter_In in Hw. destruct Hw as [Hg _].
+    apply gen_spec in Hg. destruct Hg as [[Hlen [Hnd _]] _].
+    rewrite (suffix_pat_skipn 2 M w Hlen).
+    assert (Hsk : length (skipn M w) = 2)
+      by (rewrite length_skipn, Hlen; lia).
+    assert (Hp : is_perm (std (skipn M w)) 2).
+    { assert (K := std_is_perm (skipn M w) (NoDup_skipn w M Hnd)).
+      rewrite Hsk in K. exact K. }
+    destruct (perm_two_cases _ Hp) as [E|E]; rewrite E;
+      [right; left | left]; reflexivity. }
+  assert (Hnd : NoDup [[1; 0]; [0; 1]]).
+  { constructor; [| constructor; [intros [] | constructor]].
+    intros [H|[]]. discriminate. }
+  rewrite (Ddiag_partition 2 M [[1; 0]; [0; 1]] Hnd Hcov).
+  cbn [fold_right].
+  rewrite <- decpat_two, (Nsig_dec 2 M).
+  lia.
+Qed.
+
+Lemma binomN_one_val : forall n, binomN n 1 = n.
+Proof.
+  induction n as [|n IH]; [reflexivity|].
+  change (binomN (S n) 1) with (binomN n 0 + binomN n 1)%nat.
+  rewrite binomN_0, IH. lia.
+Qed.
+
+Lemma binomN_two_val : forall n, (2 * binomN (S n) 2 = S n * n)%nat.
+Proof.
+  induction n as [|n IH]; [reflexivity|].
+  change (binomN (S (S n)) 2) with (binomN (S n) 1 + binomN (S n) 2)%nat.
+  rewrite binomN_one_val. nia.
+Qed.
+
+Theorem Ddiag_two_closed : forall M,
+  (2 * Nsig 2 M [0; 1] = binomN (2 * M) M + 4 ^ M)%nat ->
+  (2 * Ddiag 2 M = (M + 3) * binomN (2 * M) M + 4 ^ M)%nat.
+Proof.
+  intros M H. rewrite (Ddiag_two M).
+  assert (Hb : (2 * binomN (M + 2) 2 = (M + 2) * (M + 1))%nat).
+  { replace (M + 2)%nat with (S (M + 1))%nat by lia.
+    exact (binomN_two_val (M + 1)). }
+  assert (Hc : ((M + 1) * card132 M = binomN (2 * M) M)%nat).
+  { rewrite <- (card132_binom M). f_equal. lia. }
+  transitivity ((2 * binomN (M + 2) 2) * card132 M + 2 * Nsig 2 M [0; 1])%nat.
+  - ring.
+  - rewrite Hb, H.
+    transitivity ((M + 2) * ((M + 1) * card132 M)
+                  + (binomN (2 * M) M + 4 ^ M))%nat.
+    + ring.
+    + rewrite Hc. ring.
+Qed.
+
+(* p_2 = (M+3)/2 and q_2 = 1/2 *)
+Definition diagonal_two
+  (H : forall M, (2 * Nsig 2 M [0; 1] = binomN (2 * M) M + 4 ^ M)%nat)
+  : Diagonal 2.
+Proof.
+  refine (mkDiagonal 2 (Qmake 3 2 :: Qmake 1 2 :: nil) (Qmake 1 2 :: nil)
+            eq_refl eq_refl _).
+  intro M.
+  assert (K := Ddiag_two_closed M (H M)).
+  assert (E : Qn (2 * Ddiag 2 M)%nat == Qmult 2 (Qn (Ddiag 2 M))).
+  { rewrite Qn_mul, Qn2. reflexivity. }
+  assert (E3 : Qn 3 == 3) by (unfold Qn, Qeq; simpl; lia).
+  assert (KQ : Qmult 2 (Qn (Ddiag 2 M))
+               == Qplus (Qmult (Qplus (Qn M) 3) (Qn (binomN (2 * M) M)))
+                        (Qn (4 ^ M))).
+  { rewrite <- E, K, Qn_add, Qn_mul, Qn_add, E3. reflexivity. }
+  cbn [polyQ dp dq].
+  setoid_replace (Qn (Ddiag 2 M))
+    with (Qdiv (Qmult 2 (Qn (Ddiag 2 M))) 2) by field.
+  rewrite KQ. field.
+Defined.
+
+(* ------------------------------------------------------------------ *)
+(* The diagonal against its decreasing fibre.  Every occurring suffix pattern
+   is a 1324-avoider of length d, and no fibre beats the decreasing one, so
+   the diagonal sits between one and card d copies of it. *)
+
+Lemma fold_Nsig_le : forall d M B (l : list (list nat)),
+  (forall sg, In sg l -> Nsig d M sg <= B) ->
+  fold_right (fun sg acc => Nsig d M sg + acc) 0 l <= length l * B.
+Proof.
+  intros d M B l. induction l as [|a l IH]; intro H;
+    cbn [fold_right length]; [lia|].
+  assert (Ha := H a (or_introl eq_refl)).
+  assert (Hl := IH (fun sg Hs => H sg (or_intror Hs))). lia.
+Qed.
+
+Lemma suffix_pat_in_gen : forall d M w,
+  In w (filter (fun w => avoids132b (firstn M w)) (gen (M + d))) ->
+  In (suffix_pat d w) (gen d).
+Proof.
+  intros d M w Hw. apply filter_In in Hw. destruct Hw as [Hg _].
+  assert (Hg' := Hg). apply gen_spec in Hg'.
+  destruct Hg' as [[Hlen [Hnd Hb]] Hav].
+  rewrite (suffix_pat_skipn d M w Hlen).
+  assert (Hsk : length (skipn M w) = d)
+    by (rewrite length_skipn, Hlen; lia).
+  apply gen_spec. split.
+  - assert (K := std_is_perm (skipn M w) (NoDup_skipn w M Hnd)).
+    rewrite Hsk in K. exact K.
+  - intro C.
+    apply (proj1 (std_1324 (M + d) (skipn M w) (NoDup_skipn w M Hnd)
+                    (fun y Hy => Hb y (in_skipn_w w M y Hy)))) in C.
+    apply Hav. apply (subseq_1324 (skipn M w) w);
+      [apply skipn_subseq | exact C].
+Qed.
+
+Theorem Ddiag_le_dec : forall d M,
+  Ddiag d M <= card d * Nsig d M (decpat d).
+Proof.
+  intros d M.
+  rewrite (Ddiag_partition d M (gen d) (gen_nodup d)
+             (fun w Hw => suffix_pat_in_gen d M w Hw)).
+  unfold card. apply fold_Nsig_le. intros sg _. apply Nsig_le_dec.
+Qed.
+
+Corollary Ddiag_sandwich : forall d M,
+  binomN (M + d) d * card132 M <= Ddiag d M
+  /\ Ddiag d M <= card d * (binomN (M + d) d * card132 M).
+Proof.
+  intros d M. split.
+  - apply Ddiag_ge_free.
+  - rewrite <- (Nsig_dec d M). apply Ddiag_le_dec.
 Qed.
