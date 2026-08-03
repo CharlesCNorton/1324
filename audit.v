@@ -1126,13 +1126,21 @@ Print Assumptions transfer_card.
 Compute (length (slev 5 5), cardf 5).
 Compute (length (slev 6 6), tcard 6 6, length (tlev 6 6)).
 
-(* ---- the automation layer: rank transport ---- *)
+(* ---- the automation layer: projections, rank transport, cell rebuilding ---- *)
+Print Assumptions perm_len.
+Print Assumptions perm_nodup.
+Print Assumptions perm_bound.
+Print Assumptions gen_perm.
+Print Assumptions gen_av.
+Print Assumptions gen132_perm.
+Print Assumptions gen132_av.
 Print Assumptions rank_val.
 Print Assumptions rank_bound.
 Print Assumptions rank_ord.
 Print Assumptions filter_132.
 Print Assumptions filter_213.
 Print Assumptions filter_1324.
+Print Assumptions cell_reconstruct.
 
 (* ---- the fast layer, completed ---- *)
 Print Assumptions cardf_eq.

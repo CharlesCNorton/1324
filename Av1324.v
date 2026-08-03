@@ -1845,6 +1845,24 @@ Qed.
 Definition is_perm (u : list nat) (m : nat) : Prop :=
   length u = m /\ NoDup u /\ forall x, In x u -> (x < m)%nat.
 
+(* The projections of is_perm, and the hint database from which the structural
+   side conditions of the proofs below are discharged. *)
+
+Lemma perm_len : forall u m, is_perm u m -> length u = m.
+Proof. intros u m [H _]. exact H. Qed.
+
+Lemma perm_nodup : forall u m, is_perm u m -> NoDup u.
+Proof. intros u m [_ [H _]]. exact H. Qed.
+
+Lemma perm_bound : forall u m, is_perm u m -> forall x, In x u -> (x < m)%nat.
+Proof. intros u m [_ [_ H]]. exact H. Qed.
+
+Create HintDb av1324.
+#[export] Hint Resolve perm_len perm_nodup perm_bound : av1324.
+
+(* enumerator membership, the shape of a permutation, duplicate-freeness *)
+Ltac av := eauto with av1324.
+
 Lemma ext_not_in : forall u v, ~ In v (map (bump v) u).
 Proof.
   intros u v H. destruct (in_map_bump v u v H) as [y [_ Hy]].
@@ -2236,6 +2254,14 @@ Proof.
       rewrite <- Hv in Hv'. apply ext_inj in Hv'.
       destruct Hv' as [Hu2 _]. symmetry. exact Hu2.
 Qed.
+
+Lemma gen_perm : forall m w, In w (gen m) -> is_perm w m.
+Proof. intros m w H. exact (proj1 (gen_sound m w H)). Qed.
+
+Lemma gen_av : forall m w, In w (gen m) -> ~ contains_1324 w.
+Proof. intros m w H. exact (proj2 (gen_sound m w H)). Qed.
+
+#[export] Hint Resolve gen_perm gen_av gen_nodup : av1324.
 
 (* card m is the cardinality of the class, with its branching recurrence. *)
 
@@ -5644,8 +5670,8 @@ Theorem midmax_132 : forall u v m n,
   (contains_132 (midmax u v) <-> (contains_132 u \/ contains_132 v)).
 Proof.
   intros u v m n Hu Hv.
-  assert (Hlu : length u = m) by (destruct Hu as [H _]; exact H).
-  assert (Hlv : length v = n) by (destruct Hv as [H _]; exact H).
+  assert (Hlu : length u = m) by av.
+  assert (Hlv : length v = n) by av.
   assert (Bu : forall t, (t < length u)%nat -> (nth t u 0%nat < m)%nat).
   { intros t Ht. destruct Hu as [_ [_ Hb]]. apply Hb. apply nth_In. exact Ht. }
   assert (Bv : forall t, (t < length v)%nat -> (nth t v 0%nat < n)%nat).
@@ -5806,9 +5832,9 @@ Proof.
   intros w m Hp H132.
   assert (Hne : w <> []).
   { destruct Hp as [Hlen _]. intro Hc. subst w. simpl in Hlen. discriminate. }
-  assert (Hnd : NoDup w) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hnd : NoDup w) by av.
   destruct (exists_max_split w Hnd Hne) as [pre [n [suf [Heq [Hpre Hsuf]]]]].
-  assert (Hlen : length w = S m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length w = S m) by av.
   assert (Hsplit : (length pre + S (length suf) = S m)%nat)
     by (rewrite Heq, len_app in Hlen; simpl in Hlen; lia).
   assert (Hnm : n = m).
@@ -5904,8 +5930,8 @@ Lemma midmax_max_unique : forall u v m n t,
   nth t (midmax u v) 0%nat = (length u + length v)%nat -> t = length u.
 Proof.
   intros u v m n t Hu Hv Ht He.
-  assert (Hlu : length u = m) by (destruct Hu as [H _]; exact H).
-  assert (Hlv : length v = n) by (destruct Hv as [H _]; exact H).
+  assert (Hlu : length u = m) by av.
+  assert (Hlv : length v = n) by av.
   destruct (Nat.lt_trichotomy t (length u)) as [K | [K | K]]; [| exact K |].
   - exfalso. rewrite (midmax_lo u v t K) in He.
     assert (nth t u 0%nat < m)%nat
@@ -6561,6 +6587,14 @@ Proof.
       destruct Hv' as [Hu2 _]. symmetry. exact Hu2.
 Qed.
 
+Lemma gen132_perm : forall m w, In w (gen132 m) -> is_perm w m.
+Proof. intros m w H. exact (proj1 (gen132_sound m w H)). Qed.
+
+Lemma gen132_av : forall m w, In w (gen132 m) -> ~ contains_132 w.
+Proof. intros m w H. exact (proj2 (gen132_sound m w H)). Qed.
+
+#[export] Hint Resolve gen132_perm gen132_av gen132_nodup : av1324.
+
 Definition card132 (m : nat) : nat := length (gen132 m).
 
 Theorem card132_is_cardinality : forall m,
@@ -6993,7 +7027,7 @@ Theorem pinv_132 : forall u m, is_perm u m ->
 Proof.
   intros u m Hp [i [j [k H]]]. unfold has_132_at in H.
   destruct H as [Hij [Hjk [Hk [Hik Hkj]]]].
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   assert (Hbnd : forall t, (t < m)%nat -> (nth t u 0%nat < m)%nat).
   { intros t Ht. destruct Hp as [_ [_ Hb]]. apply Hb. apply nth_In. lia. }
   exists (nth i u 0%nat), (nth k u 0%nat), (nth j u 0%nat).
@@ -7024,7 +7058,7 @@ Theorem pinv_1324 : forall u m, is_perm u m ->
 Proof.
   intros u m Hp [i [j [k [l H]]]]. unfold has_1324_at in H.
   destruct H as [Hij [Hjk [Hkl [Hl [Hik [Hkj Hjl]]]]]].
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   assert (Hbnd : forall t, (t < m)%nat -> (nth t u 0%nat < m)%nat).
   { intros t Ht. destruct Hp as [_ [_ Hb]]. apply Hb. apply nth_In. lia. }
   exists (nth i u 0%nat), (nth k u 0%nat), (nth j u 0%nat), (nth l u 0%nat).
@@ -7075,7 +7109,7 @@ Proof.
     + intro Hw. apply in_map_iff in Hw. destruct Hw as [u [Hu Huin]].
       subst w. apply Hin. exact Huin.
     + intro Hw. apply in_map_iff. exists (pinv w). split.
-      * assert (Hp : is_perm w m) by (apply gen132_spec in Hw; exact (proj1 Hw)).
+      * assert (Hp : is_perm w m) by av.
         apply (pinv_involutive w m Hp).
       * apply Hin. exact Hw.
 Qed.
@@ -7133,7 +7167,7 @@ Lemma invpairs_transport : forall u m, is_perm u m ->
   forall p, In p (invpairs u) -> In (swapnth u p) (invpairs (pinv u)).
 Proof.
   intros u m Hp p Hin.
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   assert (Hbd := invpairs_bounds u p Hin).
   unfold invpairs in Hin. apply filter_In in Hin. destruct Hin as [_ Hb].
   unfold invb in Hb. apply Nat.ltb_lt in Hb.
@@ -7155,7 +7189,7 @@ Lemma swapnth_inj : forall u m, is_perm u m ->
   swapnth u p = swapnth u q -> p = q.
 Proof.
   intros u m Hp p q Hip Hiq He.
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   assert (Hp' := invpairs_bounds u p Hip).
   assert (Hq' := invpairs_bounds u q Hiq).
   assert (Hpf : (fst p < m)%nat) by lia.
@@ -7547,6 +7581,8 @@ Proof.
   intros a b. unfold dominoes. apply NoDup_filter. apply gen_nodup.
 Qed.
 
+#[export] Hint Resolve dominoes_nodup : av1324.
+
 (* The lower cell of a domino avoids 132. *)
 Lemma dominoes_locell_132 : forall a b w,
   In w (dominoes a b) -> ~ contains_132 (locell b w).
@@ -7920,7 +7956,7 @@ Proof.
   intros m k.
   assert (Hin : forall u, In u (invfibre m k) -> In (pinv u) (invfibre m k)).
   { intros u Hu. assert (Hg := invfibre_gen132 m k u Hu).
-    assert (Hp : is_perm u m) by (apply gen132_spec in Hg; exact (proj1 Hg)).
+    assert (Hp : is_perm u m) by av.
     unfold invfibre in Hu. apply filter_In in Hu. destruct Hu as [_ Hk].
     unfold invfibre. apply filter_In. split.
     - apply (Permutation_in _ (pinv_gen132 m)). apply in_map. exact Hg.
@@ -7939,7 +7975,7 @@ Proof.
       subst w. apply Hin. exact Huin.
     + intro Hw. apply in_map_iff. exists (pinv w). split.
       * assert (Hg := invfibre_gen132 m k w Hw).
-        assert (Hp : is_perm w m) by (apply gen132_spec in Hg; exact (proj1 Hg)).
+        assert (Hp : is_perm w m) by av.
         apply (pinv_involutive w m Hp).
       * apply Hin. exact Hw.
 Qed.
@@ -8310,7 +8346,7 @@ Lemma safe_iff_top_prefix : forall u m v,
   (safe_at u v <-> Forall (fun x => (v <= x)%nat) (firstn (m - v) u)).
 Proof.
   intros u m v Hp Hv.
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   split.
   - intro Hs. apply safe_iff_split in Hs.
     destruct Hs as [A [B [Heq [HA HB]]]].
@@ -8436,8 +8472,7 @@ Theorem card132_sccount : forall m,
   = fold_right (fun u acc => (sccount u m + acc)%nat) 0%nat (gen132 m).
 Proof.
   intro m. rewrite card132_recurrence. apply nfold_ext_in.
-  intros u Hu. apply safecount_sccount.
-  apply gen132_spec in Hu. exact (proj1 Hu).
+  intros u Hu. apply safecount_sccount. av.
 Qed.
 
 (* Extending by v keeps the split points at or below m - v and gains the full one. *)
@@ -8493,7 +8528,7 @@ Lemma topsplit_in_firstn : forall u m j, is_perm u m -> (j <= m)%nat ->
   forall t, (m - j <= t)%nat -> (t < m)%nat -> In t (firstn j u).
 Proof.
   intros u m j Hp Hj Ht t Hlo Hhi.
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   assert (HLj : length (firstn j u) = j) by (rewrite length_firstn; lia).
   assert (Hnd : NoDup (firstn j u)).
   { apply NoDup_firstn. destruct Hp as [_ [H _]]. exact H. }
@@ -8514,7 +8549,7 @@ Theorem topsplit_ext : forall u m v j,
   topsplit (ext u v) (S m) j = andb (Nat.leb j (m - v)) (topsplit u m j).
 Proof.
   intros u m v j Hp Hv Hj.
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   assert (Hfe : firstn j (ext u v) = map (bump v) (firstn j u)).
   { unfold ext. rewrite firstn_app_le, firstn_map_nat;
       [reflexivity | rewrite len_map; lia]. }
@@ -8760,7 +8795,7 @@ Theorem card_succ_mu : forall m,
   card (S m) = fold_right (fun u acc => (mucount u m + acc)%nat) 0%nat (gen m).
 Proof.
   intro m. rewrite card_succ. apply nfold_ext_in. intros u Hu.
-  assert (Hav : ~ contains_1324 u) by (apply gen_spec in Hu; exact (proj2 Hu)).
+  assert (Hav : ~ contains_1324 u) by av.
   unfold mucount. destruct (mub u) as [d|] eqn:E.
   - apply (fibre_count u m d Hav). apply mub_is_mu. exact E.
   - apply fibre_count_free. apply mub_none_132free. exact E.
@@ -8788,7 +8823,7 @@ Proof.
   apply filter_ext_in_nat. intros y _.
   change (match mub u with None => true | Some a => Nat.leb y a end)
     with (legalf u y).
-  apply legalf_legalb. apply gen_spec in Hu. exact (proj2 Hu).
+  apply legalf_legalb. av.
 Qed.
 
 (* The same enumerator with the O(n^2) safety decider replaced by the O(n)
@@ -8808,7 +8843,7 @@ Proof.
   cbn [gen132f]. rewrite IH, gen132_S.
   apply flat_map_ext_in. intros u Hu. f_equal.
   symmetry. apply filter_ext_in_nat. intros v Hv. apply in_seq in Hv.
-  apply safeb_topsplit; [apply gen132_spec in Hu; exact (proj1 Hu) | lia].
+  apply safeb_topsplit; [av | lia].
 Qed.
 
 (* The domino layer over the fast enumerators, each equal to its original. *)
@@ -9115,10 +9150,10 @@ Proof.
   - apply gen132_nodup.
   - intro w. rewrite filter_In. split.
     + intros [Hg Ha]. apply gen132_spec. split.
-      * apply gen_spec in Hg. exact (proj1 Hg).
+      * av.
       * apply avoids132b_true. exact Ha.
     + intro Hw. split; [apply gen132_incl; exact Hw|].
-      apply avoids132b_intro. apply gen132_spec in Hw. exact (proj2 Hw).
+      apply avoids132b_intro. av.
 Qed.
 
 Theorem Ddiag_one : forall M, Ddiag 1 M = (S M * card132 M)%nat.
@@ -9132,7 +9167,7 @@ Proof.
     = (if avoids132b u then S M else 0)%nat).
   { intros u Hu.
     assert (HL : length u = M).
-    { apply gen_spec in Hu. exact (proj1 (proj1 Hu)). }
+    { av. }
     rewrite (filter_map_ext M u _ HL).
     destruct (avoids132b u) eqn:E; [|reflexivity].
     assert (HF : filter (legalb u) (seq 0 (S M)) = seq 0 (S M)).
@@ -9226,7 +9261,7 @@ Proof.
   rewrite (length_filter_fold (list nat)
              (fun u => Nat.leb (j - 1) (sccount u m)) (gen132 m)).
   apply nfold_ext_in. intros u Hu.
-  assert (Hp : is_perm u m) by (apply gen132_spec in Hu; exact (proj1 Hu)).
+  assert (Hp : is_perm u m) by av.
   rewrite (children_count u m j Hp Hj).
   destruct (Nat.leb_spec j (S (sccount u m)));
     destruct (Nat.leb_spec (j - 1) (sccount u m));
@@ -9242,7 +9277,7 @@ Proof.
   transitivity (fold_right (fun (_ : list nat) acc => (0 + acc)%nat) 0%nat
                            (gen132 m)).
   - apply nfold_ext_in. intros u Hu.
-    assert (Hp : is_perm u m) by (apply gen132_spec in Hu; exact (proj1 Hu)).
+    assert (Hp : is_perm u m) by av.
     rewrite (length_filter_eqb_map (list nat) (fun w => sccount w (S m)) j
                (children u m)).
     rewrite (perm_filter_length (fun v => Nat.eqb v j)
@@ -9745,6 +9780,9 @@ Proof.
     [apply decpat_nodup | apply decpat_bound]].
 Qed.
 
+#[export] Hint Resolve decpat_length decpat_nodup decpat_bound decpat_is_perm
+  decpat_avoids_132 : av1324.
+
 Lemma contains_213_addc : forall c l,
   contains_213 (map (fun x => (x + c)%nat) l) <-> contains_213 l.
 Proof.
@@ -9790,10 +9828,10 @@ Proof.
   intros a b P h HP Hh.
   apply bwords_spec in HP. destruct HP as [HPlen HPcnt].
   apply gen213_spec in Hh. destruct Hh as [Hhp Hh213].
-  assert (Hhlen : length h = a) by (destruct Hhp as [H _]; exact H).
-  assert (Hhnd : NoDup h) by (destruct Hhp as [_ [H _]]; exact H).
+  assert (Hhlen : length h = a) by av.
+  assert (Hhnd : NoDup h) by av.
   assert (Hhb : forall x, In x h -> (x < a)%nat)
-    by (destruct Hhp as [_ [_ H]]; exact H).
+    by av.
   assert (Hhilen : length (map (fun x => (x + b)%nat) h) = a)
     by (rewrite len_map_add; exact Hhlen).
   assert (Hhihigh : forall x, In x (map (fun x => (x + b)%nat) h) ->
@@ -9859,10 +9897,10 @@ Lemma dec_cell_recover : forall a b w,
 Proof.
   intros a b w Hw Hlo.
   apply dominoes_spec in Hw. destruct Hw as [Hp [_ [_ H213]]].
-  assert (Hwlen : length w = (a + b)%nat) by (destruct Hp as [H _]; exact H).
-  assert (Hwnd : NoDup w) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hwlen : length w = (a + b)%nat) by av.
+  assert (Hwnd : NoDup w) by av.
   assert (Hwb : forall x, In x w -> (x < a + b)%nat)
-    by (destruct Hp as [_ [_ H]]; exact H).
+    by av.
   assert (Elo : filter (fun x => negb (Nat.leb b x)) w = decpat b).
   { rewrite <- Hlo. unfold locell. apply filter_ext_gen.
     intro x. apply negb_leb_ltb. }
@@ -9964,6 +10002,31 @@ Proof.
   intros b u. unfold locell. apply filter_ext_gen.
   intro x. symmetry. apply negb_leb_ltb.
 Qed.
+
+(* A word is determined by its mask and its two cells: mrg_split replants it
+   from exactly those three, so every injectivity argument over a value cut is
+   this one lemma. *)
+Lemma cell_reconstruct : forall b x y,
+  map (fun z => Nat.leb b z) x = map (fun z => Nat.leb b z) y ->
+  hicell b x = hicell b y ->
+  locell b x = locell b y ->
+  x = y.
+Proof.
+  intros b x y Hm Hh Hl.
+  assert (Gx := mrg_split (fun z => Nat.leb b z) x).
+  assert (Gy := mrg_split (fun z => Nat.leb b z) y).
+  cbn beta in Gx, Gy.
+  assert (Fx : filter (fun z => negb (Nat.leb b z)) x = locell b x)
+    by (symmetry; apply locell_as_negb).
+  assert (Fy : filter (fun z => negb (Nat.leb b z)) y = locell b y)
+    by (symmetry; apply locell_as_negb).
+  rewrite Fx in Gx. rewrite Fy in Gy.
+  change (filter (fun z => Nat.leb b z) x) with (hicell b x) in Gx.
+  change (filter (fun z => Nat.leb b z) y) with (hicell b y) in Gy.
+  rewrite <- Gx, <- Gy, Hm, Hh, Hl. reflexivity.
+Qed.
+
+Ltac cells b := apply (cell_reconstruct b); congruence.
 
 Lemma hicell_perm_length : forall n b u, is_perm u n -> (b <= n)%nat ->
   length (hicell b u) = (n - b)%nat.
@@ -10072,17 +10135,7 @@ Proof.
         by (rewrite <- Ehx, <- Ehy, He; reflexivity).
       assert (Ema : map (fun z => Nat.leb b z) x = map (fun z => Nat.leb b z) y)
         by (rewrite <- Emx, <- Emy, He; reflexivity).
-      assert (Gx := mrg_split (fun z => Nat.leb b z) x).
-      assert (Gy := mrg_split (fun z => Nat.leb b z) y).
-      cbn beta in Gx, Gy.
-      assert (Fx : filter (fun z => negb (Nat.leb b z)) x = locell b x)
-        by (symmetry; apply locell_as_negb).
-      assert (Fy : filter (fun z => negb (Nat.leb b z)) y = locell b y)
-        by (symmetry; apply locell_as_negb).
-      rewrite Fx in Gx. rewrite Fy in Gy.
-      change (filter (fun z => Nat.leb b z) x) with (hicell b x) in Gx.
-      change (filter (fun z => Nat.leb b z) y) with (hicell b y) in Gy.
-      rewrite <- Gx, <- Gy, Ehi, Ema, Ex, Ey. reflexivity.
+      cells b.
   - intros z Hz. apply in_map_iff in Hz. destruct Hz as [w [Hwz Hwin]].
     subst z. apply filter_In in Hwin. destruct Hwin as [Hwd _].
     apply filter_In. split; [apply flatlo_in; exact Hwd|].
@@ -10590,7 +10643,7 @@ Proof.
   intros M d P u HP Hu.
   apply bwords_spec in HP. destruct HP as [HPlen HPcnt].
   apply gen132_spec in Hu. destruct Hu as [Hup Hu132].
-  assert (Hulen : length u = M) by (destruct Hup as [H _]; exact H).
+  assert (Hulen : length u = M) by av.
   assert (HlovM : length (lov P) = M)
     by (rewrite lov_length, HPlen, HPcnt; lia).
   assert (HhivD : length (hiv P) = d) by (rewrite hiv_length; exact HPcnt).
@@ -10613,9 +10666,9 @@ Proof.
         [apply hiv_lov_perm | apply Permutation_app_comm]. }
   assert (Hip : is_perm (decword P u) (M + d))
     by (apply is_perm_of_perm_seq; exact Hperm).
-  assert (Hnd : NoDup (decword P u)) by (destruct Hip as [_ [H _]]; exact H).
+  assert (Hnd : NoDup (decword P u)) by av.
   assert (Hlen : length (decword P u) = (M + d)%nat)
-    by (destruct Hip as [H _]; exact H).
+    by av.
   assert (Hdec : forall t t', (t < t')%nat -> (t' < d)%nat ->
     (nth t' (skipn M (decword P u)) 0%nat
      < nth t (skipn M (decword P u)) 0%nat)%nat).
@@ -10646,10 +10699,10 @@ Lemma decword_recover : forall M d w,
 Proof.
   intros M d w Hw Hpre Hsp.
   apply gen_spec in Hw. destruct Hw as [Hip H1324].
-  assert (Hlen : length w = (M + d)%nat) by (destruct Hip as [H _]; exact H).
-  assert (Hnd : NoDup w) by (destruct Hip as [_ [H _]]; exact H).
+  assert (Hlen : length w = (M + d)%nat) by av.
+  assert (Hnd : NoDup w) by av.
   assert (Hwb : forall x, In x w -> (x < M + d)%nat)
-    by (destruct Hip as [_ [_ H]]; exact H).
+    by av.
   assert (Hdec := proj1 (dec_fibre_iff d M w Hlen Hnd) Hsp).
   assert (Hsklen : length (skipn M w) = d)
     by (rewrite length_skipn, Hlen; lia).
@@ -11191,7 +11244,7 @@ Lemma tromino_cellsizes : forall m w,
   /\ length (locell (2 * m) (firstn (2 * m) w)) = m.
 Proof.
   intros m w Hp He.
-  assert (Hlw : length w = (3 * m)%nat) by (destruct Hp as [H _]; exact H).
+  assert (Hlw : length w = (3 * m)%nat) by av.
   assert (HL : length (firstn (2 * m) w) = (2 * m)%nat)
     by (rewrite length_firstn, Hlw; lia).
   assert (Hhi : length (hicell (2 * m) (firstn (2 * m) w)) = m).
@@ -11207,10 +11260,10 @@ Theorem tromino_vdomino : forall m w,
 Proof.
   intros m w Hw. apply trominoes_spec in Hw.
   destruct Hw as [Hp [Hav [He [Hb [Ha Hc]]]]].
-  assert (Hlw : length w = (3 * m)%nat) by (destruct Hp as [H _]; exact H).
-  assert (Hndw : NoDup w) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hlw : length w = (3 * m)%nat) by av.
+  assert (Hndw : NoDup w) by av.
   assert (Hbw : forall x, In x w -> (x < 3 * m)%nat)
-    by (destruct Hp as [_ [_ H]]; exact H).
+    by av.
   assert (HL : length (firstn (2 * m) w) = (2 * m)%nat)
     by (rewrite length_firstn, Hlw; lia).
   assert (HndL : NoDup (firstn (2 * m) w)) by (apply NoDup_firstn; exact Hndw).
@@ -11412,7 +11465,7 @@ Theorem pinv_213 : forall u m, is_perm u m ->
 Proof.
   intros u m Hp [p [q [r H]]]. unfold has_213_at in H.
   destruct H as [Hpq [Hqr [Hr [Hqp Hpr]]]].
-  assert (Hlen : length u = m) by (destruct Hp as [H _]; exact H).
+  assert (Hlen : length u = m) by av.
   assert (Hbnd : forall t, (t < m)%nat -> (nth t u 0%nat < m)%nat).
   { intros t Ht. destruct Hp as [_ [_ Hb]]. apply Hb. apply nth_In. lia. }
   exists (nth q u 0%nat), (nth p u 0%nat), (nth r u 0%nat).
@@ -11456,8 +11509,8 @@ Lemma tromino_low_perm : forall m w,
   is_perm (locell (2 * m) w) (2 * m).
 Proof.
   intros m w Hp He.
-  assert (Hlw : length w = (3 * m)%nat) by (destruct Hp as [H _]; exact H).
-  assert (Hndw : NoDup w) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hlw : length w = (3 * m)%nat) by av.
+  assert (Hndw : NoDup w) by av.
   assert (Hhi : length (hicell (2 * m) w) = m).
   { unfold hicell. rewrite (count_ge_in_perm w (3 * m) (2 * m) Hp ltac:(lia)).
     lia. }
@@ -11475,7 +11528,7 @@ Lemma tromino_vlocell : forall m w,
 Proof.
   intros m w Hw. assert (Hw' := Hw). apply trominoes_spec in Hw'.
   destruct Hw' as [Hp [Hav [He [Hb [Ha Hc]]]]].
-  assert (Hndw : NoDup w) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hndw : NoDup w) by av.
   assert (HndL : NoDup (firstn (2 * m) w)) by (apply NoDup_firstn; exact Hndw).
   destruct (tromino_cellsizes m w Hp He) as [_ Hlo].
   assert (K := std_locell (2 * m) (firstn (2 * m) w) HndL).
@@ -11487,10 +11540,10 @@ Theorem tromino_hdomino : forall m w,
 Proof.
   intros m w Hw. assert (Hw' := Hw). apply trominoes_spec in Hw'.
   destruct Hw' as [Hp [Hav [He [Hb [Ha Hc]]]]].
-  assert (Hlw : length w = (3 * m)%nat) by (destruct Hp as [H _]; exact H).
-  assert (Hndw : NoDup w) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hlw : length w = (3 * m)%nat) by av.
+  assert (Hndw : NoDup w) by av.
   assert (Hbw : forall x, In x w -> (x < 3 * m)%nat)
-    by (destruct Hp as [_ [_ H]]; exact H).
+    by av.
   assert (HndL : NoDup (firstn (2 * m) w)) by (apply NoDup_firstn; exact Hndw).
   destruct (tromino_cellsizes m w Hp He) as [_ Hlo].
   assert (Hsplit := tromino_locell_split m w He).
@@ -11580,7 +11633,7 @@ Proof.
   intros m w x Hw. apply trominoes_spec in Hw.
   destruct Hw as [Hp [Hav [He [Hb [Ha Hc]]]]].
   assert (Hbw : forall y, In y w -> (y < 3 * m)%nat)
-    by (destruct Hp as [_ [_ H]]; exact H).
+    by av.
   split.
   - intro Hx.
     assert (Hxw : In x w) by (apply (in_firstn_w w (2 * m)); exact Hx).
@@ -11604,10 +11657,10 @@ Proof.
   destruct S1 as [Hp1 [Hav1 [He1 [Hb1 [Ha1 Hc1]]]]].
   assert (S2 := H2). apply trominoes_spec in S2.
   destruct S2 as [Hp2 [Hav2 [He2 [Hb2 [Ha2 Hc2]]]]].
-  assert (Hlw1 : length w1 = (3 * m)%nat) by (destruct Hp1 as [H _]; exact H).
-  assert (Hlw2 : length w2 = (3 * m)%nat) by (destruct Hp2 as [H _]; exact H).
-  assert (Hnd1 : NoDup w1) by (destruct Hp1 as [_ [H _]]; exact H).
-  assert (Hnd2 : NoDup w2) by (destruct Hp2 as [_ [H _]]; exact H).
+  assert (Hlw1 : length w1 = (3 * m)%nat) by av.
+  assert (Hlw2 : length w2 = (3 * m)%nat) by av.
+  assert (Hnd1 : NoDup w1) by av.
+  assert (Hnd2 : NoDup w2) by av.
   (* the two low parts agree, hence the shared cell and the cell beside it *)
   assert (Hlow : locell (2 * m) w1 = locell (2 * m) w2).
   { apply (pinv_inj _ _ (2 * m));
@@ -11777,7 +11830,7 @@ Lemma mrg_left_spec : forall m v Bl,
      = map (fun x => Nat.leb m x) v.
 Proof.
   intros m v Bl Hp HlB HbB.
-  assert (Hlv : length v = (2 * m)%nat) by (destruct Hp as [H _]; exact H).
+  assert (Hlv : length v = (2 * m)%nat) by av.
   assert (Hhilen : length (hicell m v) = m).
   { rewrite (hicell_perm_length (2 * m) m v Hp ltac:(lia)). lia. }
   assert (HcP : countt (map (fun x => Nat.leb m x) v) = m).
@@ -11818,8 +11871,8 @@ Proof.
   destruct (mrg_left_spec m v Bl Hp HlB HbB) as [Ehi [Elo Emask]].
   set (L := mrg (map (fun x => Nat.leb m x) v)
                 (map (fun x => (x + m)%nat) (hicell m v)) Bl) in *.
-  assert (Hlv : length v = (2 * m)%nat) by (destruct Hp as [H _]; exact H).
-  assert (Hndv : NoDup v) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hlv : length v = (2 * m)%nat) by av.
+  assert (Hndv : NoDup v) by av.
   assert (HndA : NoDup (map (fun x => (x + m)%nat) (hicell m v))).
   { apply NoDup_map_inj.
     - unfold hicell. apply NoDup_filter. exact Hndv.
@@ -11896,10 +11949,10 @@ Proof.
   assert (HpH : is_perm (pinv h) (2 * m))
     by (apply (pinv_perm h (2 * m)); exact Hph2).
   assert (HlH : length (pinv h) = (2 * m)%nat)
-    by (destruct HpH as [K _]; exact K).
-  assert (HndH : NoDup (pinv h)) by (destruct HpH as [_ [K _]]; exact K).
+    by av.
+  assert (HndH : NoDup (pinv h)) by av.
   assert (HbH : forall x, In x (pinv h) -> (x < 2 * m)%nat)
-    by (destruct HpH as [_ [_ K]]; exact K).
+    by av.
   assert (Hsplit : firstn m (pinv h) ++ skipn m (pinv h) = pinv h)
     by apply firstn_skipn.
   assert (HlB : length (firstn m (pinv h)) = m)
@@ -11953,7 +12006,7 @@ Proof.
                             (firstn m (pinv h))) = (2 * m)%nat).
   { rewrite <- (len_map_gen _ _ (fun x => Nat.leb (2 * m) x)), Emask,
             len_map_gen. destruct Hpv2 as [K _]. exact K. }
-  assert (Hndv : NoDup v) by (destruct Hpv2 as [_ [K _]]; exact K).
+  assert (Hndv : NoDup v) by av.
   assert (HndL : NoDup (mrg (map (fun x => Nat.leb m x) v)
                             (map (fun x => (x + m)%nat) (hicell m v))
                             (firstn m (pinv h)))).
@@ -12525,8 +12578,8 @@ Lemma perm_no_ascent_dec : forall b l, is_perm l b ->
   l = decpat b.
 Proof.
   intros b l Hp Hno.
-  assert (Hlen : length l = b) by (destruct Hp as [H _]; exact H).
-  assert (Hnd : NoDup l) by (destruct Hp as [_ [H _]]; exact H).
+  assert (Hlen : length l = b) by av.
+  assert (Hnd : NoDup l) by av.
   assert (Hstrict : forall t t', (t < t')%nat -> (t' < length l)%nat ->
             (nth t' l 0%nat < nth t l 0%nat)%nat).
   { intros t t' H1 H2.
@@ -12542,7 +12595,7 @@ Lemma dec_or_ascent : forall b l, In l (gen132 b) -> l <> decpat b ->
                (nth p l 0%nat < nth p2 l 0%nat)%nat.
 Proof.
   intros b l Hl Hne.
-  assert (Hp : is_perm l b) by (apply gen132_spec in Hl; exact (proj1 Hl)).
+  assert (Hp : is_perm l b) by av.
   destruct (bounded_ex_dec
     (fun p => exists p2, (p < p2)%nat /\ (p2 < b)%nat /\
                 (nth p l 0%nat < nth p2 l 0%nat)%nat) b) as [Hex|Hno].
@@ -12571,10 +12624,10 @@ Theorem dA_lt_dec : forall a b l,
 Proof.
   intros a b l Ha Hl Hne.
   destruct (dec_or_ascent b l Hl Hne) as [p [p2 [H1 [H2 H3]]]].
-  assert (Hp : is_perm l b) by (apply gen132_spec in Hl; exact (proj1 Hl)).
-  assert (Hlb : length l = b) by (destruct Hp as [K _]; exact K).
+  assert (Hp : is_perm l b) by av.
+  assert (Hlb : length l = b) by av.
   assert (HlB : forall x, In x l -> (x < b)%nat)
-    by (destruct Hp as [_ [_ K]]; exact K).
+    by av.
   assert (Hpb : (p < b)%nat) by lia.
   set (W := insword b p a (decpat b)).
   assert (HWin : In W (dominoes a b))
@@ -12629,17 +12682,7 @@ Proof.
         assert (Ema : map (fun z => Nat.leb b z) x
                       = map (fun z => Nat.leb b z) y)
           by (rewrite <- Emx, <- Emy, He; reflexivity).
-        assert (Gx := mrg_split (fun z => Nat.leb b z) x).
-        assert (Gy := mrg_split (fun z => Nat.leb b z) y).
-        cbn beta in Gx, Gy.
-        assert (Fx : filter (fun z => negb (Nat.leb b z)) x = locell b x)
-          by (symmetry; apply locell_as_negb).
-        assert (Fy : filter (fun z => negb (Nat.leb b z)) y = locell b y)
-          by (symmetry; apply locell_as_negb).
-        rewrite Fx in Gx. rewrite Fy in Gy.
-        change (filter (fun z => Nat.leb b z) x) with (hicell b x) in Gx.
-        change (filter (fun z => Nat.leb b z) y) with (hicell b y) in Gy.
-        rewrite <- Gx, <- Gy, Ehi, Ema, Ex, Ey. reflexivity.
+        cells b.
     - constructor; [intros [] | constructor].
     - intros z Hz1 Hz2. cbn [In] in Hz2.
       destruct Hz2 as [Hz2 | []]. subst z.
@@ -12685,7 +12728,7 @@ Theorem pqd_diag_top : forall m a,
 Proof.
   intros m a Hm. apply pqd_diag_closed. intros l Hl.
   assert (Hpos : (1 <= dA m m (decpat m))%nat) by (apply dA_dec_pos; lia).
-  assert (Hp : is_perm l m) by (apply gen132_spec in Hl; exact (proj1 Hl)).
+  assert (Hp : is_perm l m) by av.
   assert (Hli : In (pinv l) (gen132 m))
     by (apply (Permutation_in _ (pinv_gen132 m)); apply in_map; exact Hl).
   assert (Hmax : forall k, In k (gen132 m) ->
@@ -14586,13 +14629,13 @@ Lemma swaplo_in : forall a b l w,
   In (swaplo b l w) (dominoes a b).
 Proof.
   intros a b l w Hw Hl Hasc.
-  assert (Hlp : is_perm l b) by (apply gen132_spec in Hl; exact (proj1 Hl)).
+  assert (Hlp : is_perm l b) by av.
   assert (Hl132 : ~ contains_132 l)
-    by (apply gen132_spec in Hl; exact (proj2 Hl)).
-  assert (Hlen : length l = b) by (destruct Hlp as [K _]; exact K).
-  assert (Hnd : NoDup l) by (destruct Hlp as [_ [K _]]; exact K).
+    by av.
+  assert (Hlen : length l = b) by av.
+  assert (Hnd : NoDup l) by av.
   assert (Hlb : forall x, In x l -> (x < b)%nat)
-    by (destruct Hlp as [_ [_ K]]; exact K).
+    by av.
   destruct (swaplo_spec a b l w Hw Hlen Hlb) as [Elo [Ehi Emask]].
   assert (Hw' := Hw). apply dominoes_spec in Hw'.
   destruct Hw' as [Hp [Hav [Hlo132 Hhi213]]].
@@ -14704,10 +14747,10 @@ Theorem dA_ascent_mono : forall a b l l',
   (dA a b l' <= dA a b l)%nat.
 Proof.
   intros a b l l' Hl Hl' Hasc.
-  assert (Hlp : is_perm l b) by (apply gen132_spec in Hl; exact (proj1 Hl)).
-  assert (Hlen : length l = b) by (destruct Hlp as [K _]; exact K).
+  assert (Hlp : is_perm l b) by av.
+  assert (Hlen : length l = b) by av.
   assert (Hlb : forall x, In x l -> (x < b)%nat)
-    by (destruct Hlp as [_ [_ K]]; exact K).
+    by av.
   unfold dA.
   rewrite <- (len_map_gen _ _ (swaplo b l)
     (filter (fun w => if list_eq_dec Nat.eq_dec (locell b w) l'
@@ -14726,17 +14769,7 @@ Proof.
         by (rewrite <- Ehx, <- Ehy, He; reflexivity).
       assert (Ema : map (fun z => Nat.leb b z) x = map (fun z => Nat.leb b z) y)
         by (rewrite <- Emx, <- Emy, He; reflexivity).
-      assert (Gx := mrg_split (fun z => Nat.leb b z) x).
-      assert (Gy := mrg_split (fun z => Nat.leb b z) y).
-      cbn beta in Gx, Gy.
-      assert (Fx : filter (fun z => negb (Nat.leb b z)) x = locell b x)
-        by (symmetry; apply locell_as_negb).
-      assert (Fy : filter (fun z => negb (Nat.leb b z)) y = locell b y)
-        by (symmetry; apply locell_as_negb).
-      rewrite Fx in Gx. rewrite Fy in Gy.
-      change (filter (fun z => Nat.leb b z) x) with (hicell b x) in Gx.
-      change (filter (fun z => Nat.leb b z) y) with (hicell b y) in Gy.
-      rewrite <- Gx, <- Gy, Ehi, Ema, Ex, Ey. reflexivity.
+      cells b.
   - intros z Hz. apply in_map_iff in Hz. destruct Hz as [w [Hwz Hwin]].
     subst z. apply filter_In in Hwin. destruct Hwin as [Hwd Hwl].
     destruct (list_eq_dec Nat.eq_dec (locell b w) l') as [Ew|]; [|discriminate].
@@ -14932,6 +14965,13 @@ Proof.
   - exfalso. apply h. apply H. reflexivity.
 Qed.
 
+(* A decider read against a boolean expression: strip the decider, then strip
+   whatever connectives and comparisons the expression is built from. *)
+Ltac decb :=
+  apply bool_iff_eq;
+  rewrite ?orb_true_iff, ?andb_true_iff, ?negb_true_iff, ?implb_true_iff,
+          ?dec_true, ?Nat.ltb_lt, ?Nat.leb_le, ?Nat.eqb_eq.
+
 (* The state closes under appending a letter. *)
 Theorem pabs_append : forall K u y, (y < K)%nat ->
   pabs K (u ++ [y]) = pstp K (pabs K u) y.
@@ -14941,8 +14981,7 @@ Proof.
     apply map_ext_in. intros w Hw. apply in_seq in Hw. destruct Hw as [_ Hw].
     unfold afterv. rewrite (nth_map_seq_l _ K y HyK).
     rewrite (nth_map_seq_b _ K w Hw), (nth_map_seq_b _ K w Hw).
-    apply bool_iff_eq.
-    rewrite orb_true_iff, andb_true_iff, !dec_true, Nat.ltb_lt.
+    decb.
     rewrite (three_values_append u y w).
     split; intros [Q|Q].
     + left. exact Q.
@@ -14954,14 +14993,12 @@ Proof.
     apply map_ext_in. intros w Hw. apply in_seq in Hw. destruct Hw as [_ Hw].
     rewrite (nth_map_seq_l _ K z Hz), (nth_map_seq_b _ K w Hw).
     unfold belowv. rewrite (nth_map_seq_b _ K z Hz).
-    apply bool_iff_eq.
-    rewrite orb_true_iff, !andb_true_iff, !dec_true, Nat.eqb_eq, Nat.leb_le.
+    decb.
     rewrite (after_append u y z w). tauto.
   - unfold belowv, stepB. cbn [psB].
     apply map_ext_in. intros z Hz. apply in_seq in Hz. destruct Hz as [_ Hz].
     rewrite (nth_map_seq_b _ K z Hz).
-    apply bool_iff_eq.
-    rewrite orb_true_iff, dec_true, Nat.ltb_lt.
+    decb.
     rewrite (has_below_append u y z). tauto.
 Qed.
 
@@ -15075,7 +15112,7 @@ Proof.
     apply map_ext_in. intros w Hw. apply in_seq in Hw. destruct Hw as [_ Hw].
     rewrite (nth_map_seq_b _ K (unbump v w)
                ltac:(assert (H := unbump_le v w); lia)).
-    apply bool_iff_eq.
+    decb.
     destruct (Nat.eqb_spec w v) as [E|E].
     + subst w. split; [| discriminate].
       intro C. exfalso.
@@ -15088,7 +15125,7 @@ Proof.
                ltac:(assert (H := unbump_le v z); lia)).
     rewrite (nth_map_seq_b _ K (unbump v w)
                ltac:(assert (H := unbump_le v w); lia)).
-    apply bool_iff_eq.
+    decb.
     destruct (Nat.eqb_spec w v) as [E|E].
     + subst w. split; [| discriminate].
       intro C. exfalso.
@@ -15098,7 +15135,7 @@ Proof.
     apply map_ext_in. intros z Hz. apply in_seq in Hz. destruct Hz as [_ Hz].
     rewrite (nth_map_seq_b _ K (unbump v z)
                ltac:(assert (H := unbump_le v z); lia)).
-    apply bool_iff_eq. rewrite dec_true. apply has_below_map_bump.
+    decb. apply has_below_map_bump.
 Qed.
 
 Definition pext (K : nat) (S : pstate) (v : nat) : pstate :=
