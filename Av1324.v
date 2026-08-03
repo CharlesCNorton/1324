@@ -2536,29 +2536,99 @@ Proof.
   lia.
 Qed.
 
+(* Rank transport.  A position kept by a boolean test moves to its rank in the
+   filtered word with its value and its order intact, so an occurrence all of
+   whose points are kept is an occurrence of the filtered word.  Every value cut
+   below is an instance of one of the three transports. *)
+
+Definition keeps (P : nat -> bool) (w : list nat) (p : nat) : Prop :=
+  (p < length w)%nat /\ P (nth p w 0%nat) = true.
+
+(* the two side conditions of keeps, from a length bound and a value bound *)
+Ltac keep :=
+  split; [ lia
+         | cbn beta; first [ apply Nat.ltb_lt | apply Nat.leb_le ]; lia ].
+
+(* case-split every boolean comparison in sight, then decide by arithmetic *)
+Ltac natb :=
+  repeat match goal with
+         | [ |- context [Nat.leb ?a ?b] ] => destruct (Nat.leb_spec a b)
+         | [ |- context [Nat.ltb ?a ?b] ] => destruct (Nat.ltb_spec a b)
+         | [ _ : context [Nat.leb ?a ?b] |- _ ] => destruct (Nat.leb_spec a b)
+         | [ _ : context [Nat.ltb ?a ?b] |- _ ] => destruct (Nat.ltb_spec a b)
+         end;
+  solve [ reflexivity | discriminate | exfalso; lia | lia | congruence ].
+
+Lemma rank_val : forall P w p, keeps P w p ->
+  nth (rank P w p) (filter P w) 0%nat = nth p w 0%nat.
+Proof. intros P w p [H1 H2]. exact (proj2 (rank_spec P w p H1 H2)). Qed.
+
+Lemma rank_bound : forall P w p, keeps P w p ->
+  (rank P w p < length (filter P w))%nat.
+Proof. intros P w p [H1 H2]. exact (proj1 (rank_spec P w p H1 H2)). Qed.
+
+Lemma rank_ord : forall P w p q, (p < q)%nat -> keeps P w p -> keeps P w q ->
+  (rank P w p < rank P w q)%nat.
+Proof. intros P w p q Hpq [H1 H2] [H3 _]. apply rank_mono; assumption. Qed.
+
+Theorem filter_132 : forall P w i j k,
+  keeps P w i -> keeps P w j -> keeps P w k ->
+  has_132_at w i j k -> contains_132 (filter P w).
+Proof.
+  intros P w i j k Ki Kj Kk H.
+  destruct H as [Hij [Hjk [Hk [H1 H2]]]].
+  exists (rank P w i), (rank P w j), (rank P w k). unfold has_132_at.
+  rewrite (rank_val P w i Ki), (rank_val P w j Kj), (rank_val P w k Kk).
+  repeat split; try assumption.
+  - apply (rank_ord P w i j); [lia | exact Ki | exact Kj].
+  - apply (rank_ord P w j k); [lia | exact Kj | exact Kk].
+  - apply (rank_bound P w k Kk).
+Qed.
+
+Theorem filter_213 : forall P w p q r,
+  keeps P w p -> keeps P w q -> keeps P w r ->
+  has_213_at w p q r -> contains_213 (filter P w).
+Proof.
+  intros P w p q r Kp Kq Kr H.
+  destruct H as [Hpq [Hqr [Hr [H1 H2]]]].
+  exists (rank P w p), (rank P w q), (rank P w r). unfold has_213_at.
+  rewrite (rank_val P w p Kp), (rank_val P w q Kq), (rank_val P w r Kr).
+  repeat split; try assumption.
+  - apply (rank_ord P w p q); [lia | exact Kp | exact Kq].
+  - apply (rank_ord P w q r); [lia | exact Kq | exact Kr].
+  - apply (rank_bound P w r Kr).
+Qed.
+
+Theorem filter_1324 : forall P w i j k l,
+  keeps P w i -> keeps P w j -> keeps P w k -> keeps P w l ->
+  has_1324_at w i j k l -> contains_1324 (filter P w).
+Proof.
+  intros P w i j k l Ki Kj Kk Kl H.
+  destruct H as [Hij [Hjk [Hkl [Hl [H1 [H2 H3]]]]]].
+  exists (rank P w i), (rank P w j), (rank P w k), (rank P w l).
+  unfold has_1324_at.
+  rewrite (rank_val P w i Ki), (rank_val P w j Kj),
+          (rank_val P w k Kk), (rank_val P w l Kl).
+  repeat split; try assumption.
+  - apply (rank_ord P w i j); [lia | exact Ki | exact Kj].
+  - apply (rank_ord P w j k); [lia | exact Kj | exact Kk].
+  - apply (rank_ord P w k l); [lia | exact Kk | exact Kl].
+  - apply (rank_bound P w l Kl).
+Qed.
+
 Theorem above_gives_above_213 : forall j u p q r,
   has_213_above u j p q r -> contains_213 (above j u).
 Proof.
   intros j u p q r Hab.
   destruct (above_all_gt u j p q r Hab) as [Gp [Gq Gr]].
-  destruct Hab as [[Hpq [Hqr [Hr [Hqp Hpr]]]] _].
-  assert (Kp : (fun x => j <? x) (nth p u 0%nat) = true)
-    by (apply Nat.ltb_lt; exact Gp).
-  assert (Kq : (fun x => j <? x) (nth q u 0%nat) = true)
-    by (apply Nat.ltb_lt; exact Gq).
-  assert (Kr : (fun x => j <? x) (nth r u 0%nat) = true)
-    by (apply Nat.ltb_lt; exact Gr).
-  destruct (rank_spec (fun x => j <? x) u p ltac:(lia) Kp) as [Bp Ep].
-  destruct (rank_spec (fun x => j <? x) u q ltac:(lia) Kq) as [Bq Eq].
-  destruct (rank_spec (fun x => j <? x) u r Hr Kr) as [Br Er].
-  exists (rank (fun x => j <? x) u p),
-         (rank (fun x => j <? x) u q),
-         (rank (fun x => j <? x) u r).
-  unfold has_213_at, above.
-  rewrite Ep, Eq, Er.
-  repeat split; try assumption.
-  - apply rank_mono; [lia | lia | exact Kp].
-  - apply rank_mono; [lia | lia | exact Kq].
+  destruct Hab as [H213 _].
+  assert (Hpq : (p < q)%nat) by (destruct H213 as [K _]; exact K).
+  assert (Hqr : (q < r)%nat) by (destruct H213 as [_ [K _]]; exact K).
+  assert (Hr : (r < length u)%nat)
+    by (destruct H213 as [_ [_ [K _]]]; exact K).
+  unfold above.
+  apply (filter_213 (fun x => Nat.ltb j x) u p q r);
+    [ keep | keep | keep | exact H213 ].
 Qed.
 
 Corollary above_213_iff : forall j u,
@@ -7560,17 +7630,12 @@ Lemma locell_dec_pos : forall b w p1 p2,
   (nth p2 w 0%nat < nth p1 w 0%nat)%nat.
 Proof.
   intros b w p1 p2 He H12 H2 Hb1 Hb2. unfold locell in He.
-  assert (K1 : Nat.ltb (nth p1 w 0%nat) b = true)
-    by (apply Nat.ltb_lt; exact Hb1).
-  assert (K2 : Nat.ltb (nth p2 w 0%nat) b = true)
-    by (apply Nat.ltb_lt; exact Hb2).
-  destruct (rank_spec (fun x => Nat.ltb x b) w p1 ltac:(lia) K1) as [B1 E1].
-  destruct (rank_spec (fun x => Nat.ltb x b) w p2 H2 K2) as [B2 E2].
-  assert (Hm : (rank (fun x => Nat.ltb x b) w p1
-                < rank (fun x => Nat.ltb x b) w p2)%nat)
-    by (apply rank_mono; [exact H12 | exact H2 | exact K1]).
-  rewrite He in E1, E2, B2. rewrite decpat_length in B2.
-  rewrite <- E1, <- E2. apply decpat_dec; [exact Hm | exact B2].
+  assert (K1 : keeps (fun x => Nat.ltb x b) w p1) by keep.
+  assert (K2 : keeps (fun x => Nat.ltb x b) w p2) by keep.
+  assert (B2 := rank_bound _ w p2 K2).
+  rewrite <- (rank_val _ w p1 K1), <- (rank_val _ w p2 K2), He.
+  rewrite He, decpat_length in B2.
+  apply decpat_dec; [apply (rank_ord _ w p1 p2 H12 K1 K2) | exact B2].
 Qed.
 
 (* Hence no 132 among low positions, which is the first hypothesis of the
@@ -7594,23 +7659,9 @@ Lemma hicell_213_pos : forall b w i j k,
   (b <= nth k w 0%nat)%nat ->
   ~ ((nth j w 0%nat < nth i w 0%nat)%nat /\ (nth i w 0%nat < nth k w 0%nat)%nat).
 Proof.
-  intros b w i j k Hno Hij Hjk Hk Bi Bj Bk [H1 H2]. apply Hno.
-  assert (Ki : Nat.leb b (nth i w 0%nat) = true)
-    by (apply Nat.leb_le; exact Bi).
-  assert (Kj : Nat.leb b (nth j w 0%nat) = true)
-    by (apply Nat.leb_le; exact Bj).
-  assert (Kk : Nat.leb b (nth k w 0%nat) = true)
-    by (apply Nat.leb_le; exact Bk).
-  destruct (rank_spec (fun x => Nat.leb b x) w i ltac:(lia) Ki) as [Bi' Ei].
-  destruct (rank_spec (fun x => Nat.leb b x) w j ltac:(lia) Kj) as [Bj' Ej].
-  destruct (rank_spec (fun x => Nat.leb b x) w k Hk Kk) as [Bk' Ek].
-  exists (rank (fun x => Nat.leb b x) w i),
-         (rank (fun x => Nat.leb b x) w j),
-         (rank (fun x => Nat.leb b x) w k).
-  unfold has_213_at, hicell. rewrite Ei, Ej, Ek.
-  repeat split; try assumption.
-  - apply rank_mono; [exact Hij | lia | exact Ki].
-  - apply rank_mono; [exact Hjk | exact Hk | exact Kj].
+  intros b w i j k Hno Hij Hjk Hk Bi Bj Bk [H1 H2]. apply Hno. unfold hicell.
+  apply (filter_213 (fun x => Nat.leb b x) w i j k);
+    [ keep | keep | keep | unfold has_213_at; repeat split; assumption ].
 Qed.
 
 Theorem dec_cell_domino : forall a b w,
@@ -9650,10 +9701,7 @@ Proof.
 Qed.
 
 Lemma negb_leb_ltb : forall b x, negb (Nat.leb b x) = Nat.ltb x b.
-Proof.
-  intros b x. destruct (Nat.leb_spec b x); destruct (Nat.ltb_spec x b);
-    solve [reflexivity | lia].
-Qed.
+Proof. intros b x. natb. Qed.
 
 Lemma length_list_prod : forall (A B : Type) (l1 : list A) (l2 : list B),
   length (list_prod l1 l2) = (length l1 * length l2)%nat.
@@ -11049,13 +11097,7 @@ Proof.
     { unfold hicell in Hx. apply filter_In in Hx. destruct Hx as [_ Hx].
       apply Nat.leb_le. exact Hx. }
     rewrite (rankin_cut_hi n L x Hx2). lia.
-  - intros x Hx.
-    assert (K := std_cut_test n L x Hx).
-    destruct (Nat.ltb_spec (rankin L x) (length (locell n L)));
-      destruct (Nat.ltb_spec x n);
-      destruct (Nat.leb_spec (length (locell n L)) (rankin L x));
-      destruct (Nat.leb_spec n x);
-      solve [reflexivity | exfalso; lia | exfalso; discriminate].
+  - intros x Hx. assert (K := std_cut_test n L x Hx). natb.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -11616,25 +11658,9 @@ Lemma locell_1324_pos : forall b w i j k l,
   has_1324_at w i j k l ->
   contains_1324 (locell b w).
 Proof.
-  intros b w i j k l Hij Hjk Hkl Hl Bi Bj Bk Bl H.
-  destruct H as [_ [_ [_ [_ [Hik [Hkj Hjl]]]]]].
-  assert (Ki : Nat.ltb (nth i w 0%nat) b = true) by (apply Nat.ltb_lt; exact Bi).
-  assert (Kj : Nat.ltb (nth j w 0%nat) b = true) by (apply Nat.ltb_lt; exact Bj).
-  assert (Kk : Nat.ltb (nth k w 0%nat) b = true) by (apply Nat.ltb_lt; exact Bk).
-  assert (Kl : Nat.ltb (nth l w 0%nat) b = true) by (apply Nat.ltb_lt; exact Bl).
-  destruct (rank_spec (fun x => Nat.ltb x b) w i ltac:(lia) Ki) as [Ri Ei].
-  destruct (rank_spec (fun x => Nat.ltb x b) w j ltac:(lia) Kj) as [Rj Ej].
-  destruct (rank_spec (fun x => Nat.ltb x b) w k ltac:(lia) Kk) as [Rk Ek].
-  destruct (rank_spec (fun x => Nat.ltb x b) w l Hl Kl) as [Rl El].
-  exists (rank (fun x => Nat.ltb x b) w i),
-         (rank (fun x => Nat.ltb x b) w j),
-         (rank (fun x => Nat.ltb x b) w k),
-         (rank (fun x => Nat.ltb x b) w l).
-  unfold has_1324_at, locell. rewrite Ei, Ej, Ek, El.
-  repeat split; try assumption.
-  - apply rank_mono; [exact Hij | lia | exact Ki].
-  - apply rank_mono; [exact Hjk | lia | exact Kj].
-  - apply rank_mono; [exact Hkl | exact Hl | exact Kk].
+  intros b w i j k l Hij Hjk Hkl Hl Bi Bj Bk Bl H. unfold locell.
+  apply (filter_1324 (fun x => Nat.ltb x b) w i j k l);
+    [ keep | keep | keep | keep | exact H ].
 Qed.
 
 Lemma domino_cellsizes : forall m v,
@@ -11830,11 +11856,7 @@ Proof.
                   = map (fun x => Nat.leb m x) v).
   { rewrite <- Emask. unfold std. rewrite map_map.
     apply map_ext_in. intros x Hx.
-    assert (K := std_cut_test (2 * m) L x Hx). rewrite HlocL in K.
-    destruct (Nat.ltb_spec (rankin L x) m); destruct (Nat.ltb_spec x (2 * m));
-      destruct (Nat.leb_spec m (rankin L x));
-      destruct (Nat.leb_spec (2 * m) x);
-      solve [reflexivity | exfalso; lia | exfalso; discriminate]. }
+    assert (K := std_cut_test (2 * m) L x Hx). rewrite HlocL in K. natb. }
   (* two words with the same mask and the same two cells are equal *)
   assert (Gv := mrg_split (fun x => Nat.leb m x) v).
   assert (GL := mrg_split (fun x => Nat.leb m x) (std L)).
@@ -14452,20 +14474,9 @@ Lemma locell_132_pos : forall b w i j k,
   (nth i w 0%nat < b)%nat -> (nth j w 0%nat < b)%nat -> (nth k w 0%nat < b)%nat ->
   ~ ((nth i w 0%nat < nth k w 0%nat)%nat /\ (nth k w 0%nat < nth j w 0%nat)%nat).
 Proof.
-  intros b w i j k Hno Hij Hjk Hk Bi Bj Bk [H1 H2]. apply Hno.
-  assert (Ki : Nat.ltb (nth i w 0%nat) b = true) by (apply Nat.ltb_lt; exact Bi).
-  assert (Kj : Nat.ltb (nth j w 0%nat) b = true) by (apply Nat.ltb_lt; exact Bj).
-  assert (Kk : Nat.ltb (nth k w 0%nat) b = true) by (apply Nat.ltb_lt; exact Bk).
-  destruct (rank_spec (fun x => Nat.ltb x b) w i ltac:(lia) Ki) as [Bi' Ei].
-  destruct (rank_spec (fun x => Nat.ltb x b) w j ltac:(lia) Kj) as [Bj' Ej].
-  destruct (rank_spec (fun x => Nat.ltb x b) w k Hk Kk) as [Bk' Ek].
-  exists (rank (fun x => Nat.ltb x b) w i),
-         (rank (fun x => Nat.ltb x b) w j),
-         (rank (fun x => Nat.ltb x b) w k).
-  unfold has_132_at, locell. rewrite Ei, Ej, Ek.
-  repeat split; try assumption.
-  - apply rank_mono; [exact Hij | lia | exact Ki].
-  - apply rank_mono; [exact Hjk | exact Hk | exact Kj].
+  intros b w i j k Hno Hij Hjk Hk Bi Bj Bk [H1 H2]. apply Hno. unfold locell.
+  apply (filter_132 (fun x => Nat.ltb x b) w i j k);
+    [ keep | keep | keep | unfold has_132_at; repeat split; assumption ].
 Qed.
 
 Lemma rank_of_mask_hi : forall b w w' p,
@@ -14490,11 +14501,7 @@ Proof.
     cbn [map] in Hm. injection Hm as Hxy Hm'.
     destruct p as [|p]; [rewrite !rank_0; reflexivity|].
     rewrite !rank_cons.
-    assert (E : Nat.ltb x b = Nat.ltb y b).
-    { destruct (Nat.leb_spec b x); destruct (Nat.leb_spec b y);
-        try discriminate Hxy;
-        destruct (Nat.ltb_spec x b); destruct (Nat.ltb_spec y b);
-        solve [reflexivity | exfalso; lia]. }
+    assert (E : Nat.ltb x b = Nat.ltb y b) by natb.
     rewrite E, (IH w' p Hm'). reflexivity.
 Qed.
 
@@ -15337,3 +15344,916 @@ Fixpoint tlev (K m : nat) : list (pstate * nat) :=
 
 Definition tcard (K m : nat) : nat :=
   fold_right (fun p acc => (snd p + acc)%nat) 0%nat (tlev K m).
+
+(* ------------------------------------------------------------------ *)
+(* The fast layer, completed.  genf hoists mu out of the inner loop and
+   gen132f replaces the quadratic safety decider by the prefix test; every
+   quantity that is ever evaluated is given a form built on those two, so a
+   reduction cannot reach the definitional enumerators by oversight. *)
+
+Definition cardf (m : nat) : nat := length (genf m).
+
+Lemma cardf_eq : forall m, cardf m = card m.
+Proof. intro m. unfold cardf, card. rewrite genf_eq. reflexivity. Qed.
+
+Definition card132f (m : nat) : nat := length (gen132f m).
+
+Lemma card132f_eq : forall m, card132f m = card132 m.
+Proof. intro m. unfold card132f, card132. rewrite gen132f_eq. reflexivity. Qed.
+
+Definition Ddiagf (d M : nat) : nat :=
+  length (filter (fun w => avoids132b (firstn M w)) (genf (M + d))).
+
+Lemma Ddiagf_eq : forall d M, Ddiagf d M = Ddiag d M.
+Proof. intros d M. unfold Ddiagf, Ddiag. rewrite genf_eq. reflexivity. Qed.
+
+Definition Nsigf (d M : nat) (sg : list nat) : nat :=
+  length (filter (fun w =>
+            andb (avoids132b (firstn M w))
+                 (if list_eq_dec Nat.eq_dec (suffix_pat d w) sg
+                  then true else false))
+          (genf (M + d))).
+
+Lemma Nsigf_eq : forall d M sg, Nsigf d M sg = Nsig d M sg.
+Proof. intros d M sg. unfold Nsigf, Nsig. rewrite genf_eq. reflexivity. Qed.
+
+Definition dAf (a b : nat) (l : list nat) : nat := natlook (dAtablef a b) l.
+
+Lemma dAf_eq : forall a b l, In l (gen132 b) -> dAf a b l = dA a b l.
+Proof.
+  intros a b l H. unfold dAf. rewrite dAtablef_eq.
+  apply natlook_dAtable. exact H.
+Qed.
+
+Definition gluedf (m : nat) : list (list nat * list nat) :=
+  filter (fun p => if list_eq_dec Nat.eq_dec
+                       (locell m (snd p)) (pinv (locell m (fst p)))
+                   then true else false)
+         (list_prod (dominoesf m m) (dominoesf m m)).
+
+Lemma gluedf_eq : forall m, gluedf m = glued m.
+Proof. intro m. unfold gluedf, glued. rewrite dominoesf_eq. reflexivity. Qed.
+
+Definition pqd_pairsf (m : nat) : list (nat * nat) :=
+  map (fun b => (Pstat b, Pstat (pinv b))) (gen132f m).
+
+Lemma pqd_pairsf_eq : forall m, pqd_pairsf m = pqd_pairs m.
+Proof.
+  intro m. unfold pqd_pairsf, pqd_pairs. rewrite gen132f_eq. reflexivity.
+Qed.
+
+Definition diag_pairsf (m : nat) : list (nat * nat) :=
+  let t := dAtablef m m in
+  map (fun b => (natlook t b, natlook t (pinv b))) (gen132f m).
+
+Lemma diag_pairsf_eq : forall m, diag_pairsf m = diag_pairs m.
+Proof.
+  intro m. unfold diag_pairsf, diag_pairs. cbv zeta.
+  rewrite dAtablef_eq, gen132f_eq. apply map_ext_in. intros b Hb.
+  rewrite (natlook_dAtable m m b Hb).
+  rewrite (natlook_dAtable m m (pinv b));
+    [reflexivity | apply (Permutation_in _ (pinv_gen132 m)); apply in_map;
+     exact Hb].
+Qed.
+
+Definition invfibref (m k : nat) : list (list nat) :=
+  filter (fun b => if Nat.eq_dec (invcount b) k then true else false)
+         (gen132f m).
+
+Lemma invfibref_eq : forall m k, invfibref m k = invfibre m k.
+Proof.
+  intros m k. unfold invfibref, invfibre. rewrite gen132f_eq. reflexivity.
+Qed.
+
+Definition invkeysf (m : nat) : list nat :=
+  nodup Nat.eq_dec (map invcount (gen132f m)).
+
+Lemma invkeysf_eq : forall m, invkeysf m = invkeys m.
+Proof.
+  intro m. unfold invkeysf, invkeys. rewrite gen132f_eq. reflexivity.
+Qed.
+
+Definition stratum_off (F : list nat -> Z) (m k : nat) : stratum :=
+  mkStratum (length (invfibref m k))
+            (csum (map F (invfibref m k)))
+            (csum (map (fun b => (F b * F (pinv b))%Z) (invfibref m k))).
+
+Definition strata_off (F : list nat -> Z) (m : nat) : list stratum :=
+  map (stratum_off F m) (invkeysf m).
+
+Lemma strata_off_eq : forall F m, strata_off F m = strata_of F m.
+Proof.
+  intros F m. unfold strata_off, strata_of, stratum_off, stratum_of.
+  rewrite invkeysf_eq. apply map_ext. intro k.
+  rewrite invfibref_eq. reflexivity.
+Qed.
+
+Definition dstrataf (m : nat) : list stratum :=
+  let t := dAtablef m m in strata_off (dAlook t) m.
+
+Lemma dstrataf_eq : forall m, dstrataf m = dstrata m.
+Proof.
+  intro m. unfold dstrataf, dstrata. cbv zeta.
+  rewrite dAtablef_eq, strata_off_eq. reflexivity.
+Qed.
+
+Definition Tstraightf (m : nat) : Z :=
+  let t := dAtablef m m in
+  fold_right (fun b acc => (Z.of_nat (natlook t b) * Z.of_nat (natlook t b)
+                            + acc)%Z)
+             0%Z (gen132f m).
+
+Lemma Tstraightf_eq : forall m, Tstraightf m = Z.of_nat (Tstraight m).
+Proof.
+  intro m. unfold Tstraightf, Tstraight. cbv zeta.
+  rewrite dAtablef_eq, gen132f_eq.
+  rewrite (foldZ_of_nat (natlook (dAtable m m)) (natlook (dAtable m m))
+             (gen132 m)).
+  f_equal. apply nfold_ext_in. intros b Hb.
+  rewrite (natlook_dAtable m m b Hb). reflexivity.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* Linear independence of C(2M,M) and 4^M over the polynomials.
+
+   The central binomial square sits between 16^M/(4M+1) and 16^M/(3M+1), both
+   by induction on the ratio (M+1) C(2M+2,M+1) = (4M+2) C(2M,M).  A vanishing
+   combination p(M) C(2M,M) + q(M) 4^M = 0 therefore forces
+
+       (3M+1) q(M)^2  <=  p(M)^2  <=  (4M+1) q(M)^2
+
+   at every M.  A polynomial of degree f is bounded above by a multiple of M^f
+   everywhere and below by a multiple of M^f past a threshold, so those two
+   bounds place the degree of p strictly between the degree of q and one more
+   than it.  Hence both polynomials vanish, and the pair of coefficient lists a
+   Diagonal carries is determined by the diagonal it describes. *)
+
+Require Import Lqa.
+
+Lemma nat_cancel_le : forall k a b,
+  (0 < k)%nat -> (k * a <= k * b)%nat -> (a <= b)%nat.
+Proof.
+  intros k a b Hk H.
+  destruct (Nat.le_gt_cases a b) as [K|K]; [exact K|].
+  exfalso. assert (k * b < k * a)%nat by nia. lia.
+Qed.
+
+Lemma nat_pow_ge1 : forall M n, (1 <= M)%nat -> (1 <= M ^ n)%nat.
+Proof. intros M n H. induction n as [|n IH]; cbn [Nat.pow]; nia. Qed.
+
+Lemma pow16 : forall M, (16 ^ M = 4 ^ M * 4 ^ M)%nat.
+Proof.
+  induction M as [|M IH]; [reflexivity|].
+  cbn [Nat.pow]. rewrite IH. ring.
+Qed.
+
+Lemma binomN_pos : forall n k, (k <= n)%nat -> (1 <= binomN n k)%nat.
+Proof.
+  induction n as [|n IH]; intros k Hk.
+  - assert (E : k = 0%nat) by lia. subst k. reflexivity.
+  - destruct k as [|k]; [rewrite binomN_0; lia|].
+    change (binomN (S n) (S k)) with (binomN n k + binomN n (S k))%nat.
+    assert (H1 := IH k ltac:(lia)). lia.
+Qed.
+
+Lemma cb_ratio : forall M,
+  (S M * binomN (2 * S M) (S M) = (4 * M + 2) * binomN (2 * M) M)%nat.
+Proof.
+  intro M. replace (2 * S M)%nat with (2 * M + 2)%nat by lia.
+  assert (K := binomN_central M). lia.
+Qed.
+
+Lemma cb_upper : forall M,
+  ((3 * M + 1) * (binomN (2 * M) M * binomN (2 * M) M) <= 16 ^ M)%nat.
+Proof.
+  induction M as [|M IH]; [cbn; lia|].
+  assert (Hc := cb_ratio M).
+  remember (binomN (2 * M) M) as C eqn:HC.
+  remember (binomN (2 * S M) (S M)) as D eqn:HD.
+  assert (Hsq : ((M + 1) * (M + 1) * (D * D)
+                 = (4 * M + 2) * (4 * M + 2) * (C * C))%nat) by nia.
+  apply (nat_cancel_le ((3 * M + 1) * ((M + 1) * (M + 1)))); [nia|].
+  replace ((3 * M + 1) * ((M + 1) * (M + 1)) * ((3 * S M + 1) * (D * D)))%nat
+    with (((3 * M + 4) * (3 * M + 1)) * ((M + 1) * (M + 1) * (D * D)))%nat
+    by ring.
+  rewrite Hsq.
+  replace (16 ^ S M)%nat with (16 * 16 ^ M)%nat by (cbn [Nat.pow]; ring).
+  transitivity (((3 * M + 4) * ((4 * M + 2) * (4 * M + 2))) * 16 ^ M)%nat.
+  - replace ((3 * M + 4) * (3 * M + 1)
+             * ((4 * M + 2) * (4 * M + 2) * (C * C)))%nat
+      with (((3 * M + 4) * ((4 * M + 2) * (4 * M + 2)))
+            * ((3 * M + 1) * (C * C)))%nat by ring.
+    apply Nat.mul_le_mono_l. exact IH.
+  - replace ((3 * M + 1) * ((M + 1) * (M + 1)) * (16 * 16 ^ M))%nat
+      with ((16 * ((3 * M + 1) * ((M + 1) * (M + 1)))) * 16 ^ M)%nat by ring.
+    apply Nat.mul_le_mono_r.
+    replace ((3 * M + 4) * ((4 * M + 2) * (4 * M + 2)))%nat
+      with (48 * (M * M * M) + 112 * (M * M) + 76 * M + 16)%nat by ring.
+    replace (16 * ((3 * M + 1) * ((M + 1) * (M + 1))))%nat
+      with (48 * (M * M * M) + 112 * (M * M) + 80 * M + 16)%nat by ring.
+    lia.
+Qed.
+
+Lemma cb_lower : forall M,
+  (16 ^ M <= (4 * M + 1) * (binomN (2 * M) M * binomN (2 * M) M))%nat.
+Proof.
+  induction M as [|M IH]; [cbn; lia|].
+  assert (Hc := cb_ratio M).
+  remember (binomN (2 * M) M) as C eqn:HC.
+  remember (binomN (2 * S M) (S M)) as D eqn:HD.
+  assert (Hsq : ((M + 1) * (M + 1) * (D * D)
+                 = (4 * M + 2) * (4 * M + 2) * (C * C))%nat) by nia.
+  apply (nat_cancel_le ((M + 1) * (M + 1))); [nia|].
+  replace ((M + 1) * (M + 1) * 16 ^ S M)%nat
+    with ((16 * ((M + 1) * (M + 1))) * 16 ^ M)%nat
+    by (cbn [Nat.pow]; ring).
+  transitivity ((16 * ((M + 1) * (M + 1))) * ((4 * M + 1) * (C * C)))%nat.
+  - apply Nat.mul_le_mono_l. exact IH.
+  - replace ((M + 1) * (M + 1) * ((4 * S M + 1) * (D * D)))%nat
+      with ((4 * M + 5) * ((M + 1) * (M + 1) * (D * D)))%nat by ring.
+    rewrite Hsq.
+    replace (16 * ((M + 1) * (M + 1)) * ((4 * M + 1) * (C * C)))%nat
+      with ((16 * ((M + 1) * (M + 1)) * (4 * M + 1)) * (C * C))%nat by ring.
+    replace ((4 * M + 5) * ((4 * M + 2) * (4 * M + 2) * (C * C)))%nat
+      with (((4 * M + 5) * ((4 * M + 2) * (4 * M + 2))) * (C * C))%nat by ring.
+    apply Nat.mul_le_mono_r.
+    replace (16 * ((M + 1) * (M + 1)) * (4 * M + 1))%nat
+      with (64 * (M * M * M) + 144 * (M * M) + 96 * M + 16)%nat by ring.
+    replace ((4 * M + 5) * ((4 * M + 2) * (4 * M + 2)))%nat
+      with (64 * (M * M * M) + 144 * (M * M) + 96 * M + 20)%nat by ring.
+    lia.
+Qed.
+
+(* Rational scaffolding: absolute values, the archimedean step and the two
+   cancellation rules the estimates run on. *)
+
+Lemma Qabs_zero : forall x, Qabs x == 0 -> x == 0.
+Proof.
+  intros [n d] H. unfold Qabs, Qeq in *. cbn in *. lia.
+Qed.
+
+Lemma Qabs_pos_of_ne : forall x, ~ (x == 0) -> Qlt 0 (Qabs x).
+Proof.
+  intros x H. destruct (Qlt_le_dec 0 (Qabs x)) as [K|K]; [exact K|].
+  exfalso. apply H. apply Qabs_zero.
+  apply Qle_antisym; [exact K | apply Qabs_nonneg].
+Qed.
+
+Lemma Qsq_abs : forall x, Qmult x x == Qmult (Qabs x) (Qabs x).
+Proof.
+  intro x. rewrite <- Qabs_Qmult. symmetry. apply Qabs_pos. nra.
+Qed.
+
+Lemma Qabs_rev : forall x y, Qle (Qabs y) (Qplus (Qabs (Qplus x y)) (Qabs x)).
+Proof.
+  intros x y.
+  assert (E : y == Qplus (Qplus x y) (Qopp x)) by ring.
+  rewrite E at 1.
+  eapply Qle_trans; [apply Qabs_triangle|].
+  rewrite Qabs_opp. apply Qle_refl.
+Qed.
+
+Lemma Qcancel_le_r : forall x y t,
+  Qlt 0 t -> Qle (Qmult x t) (Qmult y t) -> Qle x y.
+Proof.
+  intros x y t Ht H.
+  destruct (Qlt_le_dec y x) as [K|K]; [exfalso | exact K]. nra.
+Qed.
+
+Lemma Qmul_le_r : forall x y z, Qle x y -> Qle 0 z -> Qle (Qmult x z) (Qmult y z).
+Proof. intros x y z H Hz. nra. Qed.
+
+Lemma Qmul_le_l : forall x y z, Qle x y -> Qle 0 z -> Qle (Qmult z x) (Qmult z y).
+Proof. intros x y z H Hz. nra. Qed.
+
+Lemma Zof_to_nat_ge : forall z : Z, (z <= Z.of_nat (Z.to_nat z))%Z.
+Proof.
+  intro z. destruct (Z.le_gt_cases 0 z) as [H|H].
+  - rewrite (Z2Nat.id z H). apply Z.le_refl.
+  - destruct z; [lia | lia | cbn; lia].
+Qed.
+
+Lemma Qn_above : forall q : Q, exists n : nat, Qle q (Qn n).
+Proof.
+  intro q. exists (Z.to_nat (Qnum q)).
+  unfold Qn, Qle, inject_Z. cbn [Qnum Qden].
+  assert (H := Zof_to_nat_ge (Qnum q)).
+  assert (Ht : (0 <= Z.of_nat (Z.to_nat (Qnum q)))%Z) by lia.
+  assert (Hd : (1 <= Z.pos (Qden q))%Z) by lia.
+  nia.
+Qed.
+
+Lemma Qn_nonneg : forall n : nat, Qle 0 (Qn n).
+Proof. intro n. rewrite <- Qn_0. apply Qn_le. lia. Qed.
+
+Lemma Qn3 : Qn 3 == 3.
+Proof. unfold Qn, Qeq. simpl. lia. Qed.
+
+Lemma Qn4 : Qn 4 == 4.
+Proof. unfold Qn, Qeq. simpl. lia. Qed.
+
+Lemma Qn_lin : forall k M c,
+  Qn (k * M + c)%nat == Qplus (Qmult (Qn k) (Qn M)) (Qn c).
+Proof. intros k M c. rewrite Qn_add, Qn_mul. reflexivity. Qed.
+
+Lemma no_linear_bound : forall alpha beta M0,
+  Qlt 0 alpha ->
+  (forall M : nat, (M0 <= M)%nat -> Qle (Qmult alpha (Qn M)) beta) -> False.
+Proof.
+  intros alpha beta M0 Ha H.
+  destruct (Qn_above (Qdiv beta alpha)) as [M1 HM1].
+  assert (HM := H (M0 + M1 + 1)%nat ltac:(lia)).
+  assert (Hge : Qle (Qplus (Qn M1) 1) (Qn (M0 + M1 + 1)%nat)).
+  { assert (E : Qn (M1 + 1)%nat == Qplus (Qn M1) 1)
+      by (rewrite Qn_add, Qn_1; reflexivity).
+    rewrite <- E. apply Qn_le. lia. }
+  assert (Hb : Qmult alpha (Qdiv beta alpha) == beta).
+  { field. intro C. rewrite C in Ha. exact (Qlt_irrefl 0 Ha). }
+  nra.
+Qed.
+
+(* Polynomial size.  sumabs bounds a polynomial above by a multiple of M^deg,
+   and past an explicit threshold the leading term bounds it below. *)
+
+Fixpoint sumabs (c : list Q) : Q :=
+  match c with nil => 0 | u :: r => Qplus (Qabs u) (sumabs r) end.
+
+Lemma sumabs_nonneg : forall c, Qle 0 (sumabs c).
+Proof.
+  induction c as [|u c IH]; cbn [sumabs]; [apply Qle_refl|].
+  assert (H := Qabs_nonneg u). nra.
+Qed.
+
+Lemma polyQ_upper : forall c M, (1 <= M)%nat ->
+  Qle (Qabs (polyQ c (Qn M))) (Qmult (sumabs c) (Qn (M ^ pred (length c)))).
+Proof.
+  intros c M HM.
+  assert (HQM : Qle 0 (Qn M)) by apply Qn_nonneg.
+  induction c as [|u c IH].
+  - cbn [polyQ sumabs length pred].
+    replace (M ^ 0)%nat with 1%nat by reflexivity. rewrite Qn_1.
+    setoid_replace (Qabs 0) with (0%Q) by reflexivity. nra.
+  - destruct c as [|v c'].
+    + cbn [polyQ sumabs length pred].
+      replace (M ^ 0)%nat with 1%nat by reflexivity. rewrite Qn_1.
+      setoid_replace (Qplus u (Qmult (Qn M) 0)) with u by ring.
+      assert (H := Qabs_nonneg u). nra.
+    + cbn [length pred] in *.
+      assert (HP : Qle (Qabs (polyQ (v :: c') (Qn M)))
+                       (Qmult (sumabs (v :: c')) (Qn (M ^ length c'))))
+        by exact IH.
+      assert (Eg : polyQ (u :: v :: c') (Qn M)
+                   == Qplus u (Qmult (Qn M) (polyQ (v :: c') (Qn M))))
+        by reflexivity.
+      assert (Es : sumabs (u :: v :: c')
+                   == Qplus (Qabs u) (sumabs (v :: c'))) by reflexivity.
+      rewrite Eg, Es.
+      assert (T := Qabs_triangle u (Qmult (Qn M) (polyQ (v :: c') (Qn M)))).
+      assert (Hm : Qabs (Qmult (Qn M) (polyQ (v :: c') (Qn M)))
+                   == Qmult (Qn M) (Qabs (polyQ (v :: c') (Qn M))))
+        by (rewrite Qabs_Qmult, (Qabs_pos (Qn M) HQM); reflexivity).
+      rewrite Hm in T.
+      assert (HQ : Qn (M ^ S (length c')) == Qmult (Qn M) (Qn (M ^ length c'))).
+      { cbn [Nat.pow]. rewrite Qn_mul. reflexivity. }
+      assert (Hge1 : Qle 1 (Qn (M ^ S (length c')))).
+      { rewrite <- Qn_1. apply Qn_le. apply nat_pow_ge1. exact HM. }
+      assert (Hu := Qabs_nonneg u).
+      assert (Hs := sumabs_nonneg (v :: c')).
+      assert (Hq := Qabs_nonneg (polyQ (v :: c') (Qn M))).
+      rewrite HQ. nra.
+Qed.
+
+Lemma polyQ_upper_deg : forall c n M, (1 <= M)%nat ->
+  (forall j, (n < j)%nat -> nth j c 0%Q == 0) ->
+  Qle (Qabs (polyQ c (Qn M)))
+      (Qmult (sumabs (firstn (S n) c)) (Qn (M ^ n))).
+Proof.
+  intros c n M HM Hz.
+  assert (E : polyQ c (Qn M) == polyQ (firstn (S n) c) (Qn M)).
+  { symmetry. apply polyQ_firstn. intros j Hj. apply Hz. lia. }
+  rewrite E.
+  assert (H := polyQ_upper (firstn (S n) c) M HM).
+  assert (Hpow : Qle (Qn (M ^ pred (length (firstn (S n) c)))) (Qn (M ^ n))).
+  { apply Qn_le. apply Nat.pow_le_mono_r; [lia|].
+    rewrite length_firstn. lia. }
+  assert (Hs := sumabs_nonneg (firstn (S n) c)).
+  assert (Hq := Qabs_nonneg (polyQ (firstn (S n) c) (Qn M))).
+  nra.
+Qed.
+
+Lemma polyQ_split_nat : forall n c M,
+  (forall j, (n < j)%nat -> nth j c 0%Q == 0) ->
+  polyQ c (Qn M) == Qplus (polyQ (firstn n c) (Qn M))
+                          (Qmult (nth n c 0%Q) (Qn (M ^ n))).
+Proof.
+  induction n as [|n IH]; intros c M Hz.
+  - destruct c as [|u r].
+    + cbn [firstn polyQ nth]. replace (M ^ 0)%nat with 1%nat by reflexivity.
+      rewrite Qn_1. ring.
+    + assert (Hr : polyQ r (Qn M) == 0).
+      { apply polyQ_zero_list. intro j. exact (Hz (S j) ltac:(lia)). }
+      cbn [firstn polyQ nth]. replace (M ^ 0)%nat with 1%nat by reflexivity.
+      rewrite Qn_1, Hr. ring.
+  - destruct c as [|u r].
+    + cbn [firstn polyQ nth]. ring.
+    + assert (Hz' : forall j, (n < j)%nat -> nth j r 0%Q == 0)
+        by (intros j Hj; exact (Hz (S j) ltac:(lia))).
+      assert (IHr := IH r M Hz').
+      assert (E : Qn (M ^ S n) == Qmult (Qn M) (Qn (M ^ n)))
+        by (cbn [Nat.pow]; rewrite Qn_mul; reflexivity).
+      cbn [firstn polyQ nth]. rewrite IHr, E. ring.
+Qed.
+
+Lemma polyQ_lower : forall c n,
+  (forall j, (n < j)%nat -> nth j c 0%Q == 0) ->
+  exists M0 : nat, (1 <= M0)%nat /\
+    forall M, (M0 <= M)%nat ->
+      Qle (Qmult (Qabs (nth n c 0%Q)) (Qn (M ^ n)))
+          (Qmult 2 (Qabs (polyQ c (Qn M)))).
+Proof.
+  intros c n Hz.
+  destruct (Qeq_dec (nth n c 0%Q) 0) as [HA|HA].
+  { exists 1%nat. split; [lia|]. intros M HM.
+    assert (E : Qabs (nth n c 0%Q) == 0) by (rewrite HA; reflexivity).
+    rewrite E.
+    assert (H := Qabs_nonneg (polyQ c (Qn M))). nra. }
+  destruct n as [|n'].
+  { exists 1%nat. split; [lia|]. intros M HM.
+    assert (E := polyQ_split_nat 0 c M Hz).
+    cbn [firstn polyQ] in E.
+    replace (M ^ 0)%nat with 1%nat in E by reflexivity.
+    rewrite Qn_1 in E.
+    assert (E2 : polyQ c (Qn M) == nth 0 c 0%Q) by (rewrite E; ring).
+    rewrite E2. replace (M ^ 0)%nat with 1%nat by reflexivity. rewrite Qn_1.
+    assert (H := Qabs_nonneg (nth 0 c 0%Q)). nra. }
+  assert (HK : Qle 0 (sumabs (firstn (S n') c))) by apply sumabs_nonneg.
+  assert (HAp : Qlt 0 (Qabs (nth (S n') c 0%Q))) by (apply Qabs_pos_of_ne; exact HA).
+  destruct (Qn_above (Qdiv (Qmult 2 (sumabs (firstn (S n') c)))
+                           (Qabs (nth (S n') c 0%Q)))) as [M1 HM1].
+  exists (Nat.max 1 M1). split; [lia|]. intros M HM.
+  assert (HMge : (1 <= M)%nat) by lia.
+  assert (HQM : Qle 0 (Qn M)) by apply Qn_nonneg.
+  assert (Hstep : Qle (Qdiv (Qmult 2 (sumabs (firstn (S n') c)))
+                            (Qabs (nth (S n') c 0%Q))) (Qn M)).
+  { apply (Qle_trans _ (Qn M1)); [exact HM1 | apply Qn_le; lia]. }
+  assert (Ht : Qmult (Qabs (nth (S n') c 0%Q))
+                     (Qdiv (Qmult 2 (sumabs (firstn (S n') c)))
+                           (Qabs (nth (S n') c 0%Q)))
+               == Qmult 2 (sumabs (firstn (S n') c))).
+  { field. intro C. rewrite C in HAp. exact (Qlt_irrefl 0 HAp). }
+  assert (Hthr : Qle (Qmult 2 (sumabs (firstn (S n') c)))
+                     (Qmult (Qabs (nth (S n') c 0%Q)) (Qn M))) by nra.
+  assert (Esp := polyQ_split_nat (S n') c M Hz).
+  assert (Hlow := polyQ_upper (firstn (S n') c) M HMge).
+  assert (Hpow : Qle (Qn (M ^ pred (length (firstn (S n') c)))) (Qn (M ^ n'))).
+  { apply Qn_le. apply Nat.pow_le_mono_r; [lia|].
+    rewrite length_firstn. lia. }
+  assert (Hlow2 : Qle (Qabs (polyQ (firstn (S n') c) (Qn M)))
+                      (Qmult (sumabs (firstn (S n') c)) (Qn (M ^ n')))).
+  { assert (Hq := Qabs_nonneg (polyQ (firstn (S n') c) (Qn M))). nra. }
+  assert (Hrev := Qabs_rev (polyQ (firstn (S n') c) (Qn M))
+                           (Qmult (nth (S n') c 0%Q) (Qn (M ^ S n')))).
+  assert (Habs : Qabs (Qmult (nth (S n') c 0%Q) (Qn (M ^ S n')))
+                 == Qmult (Qabs (nth (S n') c 0%Q)) (Qn (M ^ S n'))).
+  { rewrite Qabs_Qmult, (Qabs_pos (Qn (M ^ S n')) (Qn_nonneg _)). reflexivity. }
+  rewrite Habs, <- Esp in Hrev.
+  assert (HE : Qn (M ^ S n') == Qmult (Qn M) (Qn (M ^ n')))
+    by (cbn [Nat.pow]; rewrite Qn_mul; reflexivity).
+  assert (HXn : Qle 0 (Qn (M ^ n'))) by apply Qn_nonneg.
+  rewrite HE in Hrev |- *. nra.
+Qed.
+
+(* The index of the top nonzero coefficient. *)
+
+Fixpoint nzlen (c : list Q) : nat :=
+  match c with
+  | nil => O
+  | u :: r => match nzlen r with
+              | O => if Qeq_dec u 0 then O else 1%nat
+              | S k => S (S k)
+              end
+  end.
+
+Lemma nzlen_cons : forall u c,
+  nzlen (u :: c) = match nzlen c with
+                   | O => if Qeq_dec u 0 then O else 1%nat
+                   | S k => S (S k)
+                   end.
+Proof. intros u c. reflexivity. Qed.
+
+Lemma nzlen_above : forall c j, (nzlen c <= j)%nat -> nth j c 0%Q == 0.
+Proof.
+  induction c as [|u c IH]; intros j Hj.
+  - rewrite nth_nil. reflexivity.
+  - rewrite nzlen_cons in Hj. destruct (nzlen c) as [|k] eqn:Ec.
+    + destruct (Qeq_dec u 0) as [Hu|Hu].
+      * destruct j as [|j']; [exact Hu | cbn [nth]; apply IH; lia].
+      * destruct j as [|j']; [lia | cbn [nth]; apply IH; lia].
+    + destruct j as [|j']; [lia | cbn [nth]; apply IH; lia].
+Qed.
+
+Lemma nzlen_top : forall c n, nzlen c = S n -> ~ (nth n c 0%Q == 0).
+Proof.
+  induction c as [|u c IH]; intros n Hn; [cbn in Hn; discriminate|].
+  rewrite nzlen_cons in Hn. destruct (nzlen c) as [|k] eqn:Ec.
+  - destruct (Qeq_dec u 0) as [Hu|Hu]; [discriminate|].
+    injection Hn as Hn. subst n. cbn [nth]. exact Hu.
+  - injection Hn as Hn. subst n. cbn [nth]. apply IH. reflexivity.
+Qed.
+
+Lemma nzlen_zero_poly : forall c x, nzlen c = 0%nat -> polyQ c x == 0.
+Proof.
+  intros c x H. apply polyQ_zero_list. intro j. apply nzlen_above. lia.
+Qed.
+
+(* The two-sided bound the vanishing combination forces. *)
+
+Theorem two_term_sandwich : forall a b : list Q,
+  (forall M : nat,
+     Qplus (Qmult (polyQ a (Qn M)) (Qn (binomN (2 * M) M)))
+           (Qmult (polyQ b (Qn M)) (Qn (4 ^ M))) == 0) ->
+  forall M : nat,
+    Qle (Qmult (Qn (3 * M + 1)%nat)
+               (Qmult (polyQ b (Qn M)) (polyQ b (Qn M))))
+        (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+    /\ Qle (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+           (Qmult (Qn (4 * M + 1)%nat)
+                  (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))).
+Proof.
+  intros a b H M.
+  assert (HM := H M).
+  assert (HF : Qlt 0 (Qn (4 ^ M))) by (apply Qn_pos; apply four_pow_pos).
+  assert (HFF : Qmult (Qn (4 ^ M)) (Qn (4 ^ M)) == Qn (16 ^ M)).
+  { rewrite <- Qn_mul, <- pow16. reflexivity. }
+  assert (HG : Qlt 0 (Qn (16 ^ M))) by (rewrite <- HFF; nra).
+  assert (Kop : Qmult (polyQ a (Qn M)) (Qn (binomN (2 * M) M))
+                == Qopp (Qmult (polyQ b (Qn M)) (Qn (4 ^ M)))).
+  { setoid_replace (Qmult (polyQ a (Qn M)) (Qn (binomN (2 * M) M)))
+      with (Qminus (Qplus (Qmult (polyQ a (Qn M)) (Qn (binomN (2 * M) M)))
+                          (Qmult (polyQ b (Qn M)) (Qn (4 ^ M))))
+                   (Qmult (polyQ b (Qn M)) (Qn (4 ^ M)))) by ring.
+    rewrite HM. ring. }
+  assert (Hsq : Qmult (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                      (Qmult (Qn (binomN (2 * M) M)) (Qn (binomN (2 * M) M)))
+                == Qmult (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))
+                         (Qn (16 ^ M))).
+  { rewrite <- HFF.
+    setoid_replace (Qmult (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                          (Qmult (Qn (binomN (2 * M) M))
+                                 (Qn (binomN (2 * M) M))))
+      with (Qmult (Qmult (polyQ a (Qn M)) (Qn (binomN (2 * M) M)))
+                  (Qmult (polyQ a (Qn M)) (Qn (binomN (2 * M) M)))) by ring.
+    rewrite Kop. ring. }
+  assert (Hup : Qle (Qmult (Qn (3 * M + 1)%nat)
+                           (Qmult (Qn (binomN (2 * M) M))
+                                  (Qn (binomN (2 * M) M))))
+                    (Qn (16 ^ M))).
+  { assert (E : Qmult (Qn (3 * M + 1)%nat)
+                      (Qmult (Qn (binomN (2 * M) M)) (Qn (binomN (2 * M) M)))
+                == Qn ((3 * M + 1)
+                       * (binomN (2 * M) M * binomN (2 * M) M))%nat)
+      by (rewrite !Qn_mul; reflexivity).
+    rewrite E. apply Qn_le. apply cb_upper. }
+  assert (Hlo : Qle (Qn (16 ^ M))
+                    (Qmult (Qn (4 * M + 1)%nat)
+                           (Qmult (Qn (binomN (2 * M) M))
+                                  (Qn (binomN (2 * M) M))))).
+  { assert (E : Qmult (Qn (4 * M + 1)%nat)
+                      (Qmult (Qn (binomN (2 * M) M)) (Qn (binomN (2 * M) M)))
+                == Qn ((4 * M + 1)
+                       * (binomN (2 * M) M * binomN (2 * M) M))%nat)
+      by (rewrite !Qn_mul; reflexivity).
+    rewrite E. apply Qn_le. apply cb_lower. }
+  assert (HAA : Qle 0 (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))) by nra.
+  assert (E3 : Qmult (Qmult (Qn (3 * M + 1)%nat)
+                            (Qmult (polyQ b (Qn M)) (polyQ b (Qn M))))
+                     (Qn (16 ^ M))
+               == Qmult (Qn (3 * M + 1)%nat)
+                        (Qmult (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))
+                               (Qn (16 ^ M)))) by ring.
+  assert (E4 : Qmult (Qmult (Qn (4 * M + 1)%nat)
+                            (Qmult (polyQ b (Qn M)) (polyQ b (Qn M))))
+                     (Qn (16 ^ M))
+               == Qmult (Qn (4 * M + 1)%nat)
+                        (Qmult (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))
+                               (Qn (16 ^ M)))) by ring.
+  split; apply (Qcancel_le_r _ _ (Qn (16 ^ M)) HG).
+  - rewrite E3, <- Hsq.
+    setoid_replace (Qmult (Qn (3 * M + 1)%nat)
+                          (Qmult (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                                 (Qmult (Qn (binomN (2 * M) M))
+                                        (Qn (binomN (2 * M) M)))))
+      with (Qmult (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                  (Qmult (Qn (3 * M + 1)%nat)
+                         (Qmult (Qn (binomN (2 * M) M))
+                                (Qn (binomN (2 * M) M))))) by ring.
+    apply Qmul_le_l; [exact Hup | exact HAA].
+  - rewrite E4, <- Hsq.
+    setoid_replace (Qmult (Qn (4 * M + 1)%nat)
+                          (Qmult (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                                 (Qmult (Qn (binomN (2 * M) M))
+                                        (Qn (binomN (2 * M) M)))))
+      with (Qmult (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                  (Qmult (Qn (4 * M + 1)%nat)
+                         (Qmult (Qn (binomN (2 * M) M))
+                                (Qn (binomN (2 * M) M))))) by ring.
+    apply Qmul_le_l; [exact Hlo | exact HAA].
+Qed.
+
+Theorem two_term_indep : forall a b : list Q,
+  (forall M : nat,
+     Qplus (Qmult (polyQ a (Qn M)) (Qn (binomN (2 * M) M)))
+           (Qmult (polyQ b (Qn M)) (Qn (4 ^ M))) == 0) ->
+  (forall j, nth j a 0%Q == 0) /\ (forall j, nth j b 0%Q == 0).
+Proof.
+  intros a b H.
+  assert (Hs := two_term_sandwich a b H).
+  assert (Hkey : nzlen a = 0%nat /\ nzlen b = 0%nat).
+  { destruct (nzlen a) as [|nf] eqn:Ea; destruct (nzlen b) as [|ng] eqn:Eb.
+    - split; reflexivity.
+    - exfalso.
+      assert (HBz : forall j, (ng < j)%nat -> nth j b 0%Q == 0)
+        by (intros j Hj; apply nzlen_above; lia).
+      destruct (polyQ_lower b ng HBz) as [Mb [Mb1 HMb]].
+      assert (HBp : Qlt 0 (Qabs (nth ng b 0%Q)))
+        by (apply Qabs_pos_of_ne; apply (nzlen_top b ng Eb)).
+      assert (HZ := HMb Mb (Nat.le_refl Mb)).
+      assert (Haz : polyQ a (Qn Mb) == 0) by (apply nzlen_zero_poly; exact Ea).
+      assert (HMb2 := H Mb). rewrite Haz in HMb2.
+      assert (HF : Qlt 0 (Qn (4 ^ Mb))) by (apply Qn_pos; apply four_pow_pos).
+      assert (Hb0 : polyQ b (Qn Mb) == 0).
+      { assert (K : Qmult (polyQ b (Qn Mb)) (Qn (4 ^ Mb)) == 0)
+          by (rewrite <- HMb2; ring).
+        destruct (Qmult_integral _ _ K) as [Kk|Kk]; [exact Kk|].
+        exfalso. rewrite Kk in HF. exact (Qlt_irrefl 0 HF). }
+      assert (E : Qabs (polyQ b (Qn Mb)) == 0) by (rewrite Hb0; reflexivity).
+      rewrite E in HZ.
+      assert (HX : Qlt 0 (Qn (Mb ^ ng)))
+        by (apply Qn_pos; apply nat_pow_ge1; lia).
+      nra.
+    - exfalso.
+      assert (HAz : forall j, (nf < j)%nat -> nth j a 0%Q == 0)
+        by (intros j Hj; apply nzlen_above; lia).
+      destruct (polyQ_lower a nf HAz) as [Ma [Ma1 HMa]].
+      assert (HAp : Qlt 0 (Qabs (nth nf a 0%Q)))
+        by (apply Qabs_pos_of_ne; apply (nzlen_top a nf Ea)).
+      assert (HZ := HMa Ma (Nat.le_refl Ma)).
+      assert (Hbz : polyQ b (Qn Ma) == 0) by (apply nzlen_zero_poly; exact Eb).
+      assert (HMa2 := H Ma). rewrite Hbz in HMa2.
+      assert (HC : Qlt 0 (Qn (binomN (2 * Ma) Ma)))
+        by (apply Qn_pos; apply binomN_pos; lia).
+      assert (Ha0 : polyQ a (Qn Ma) == 0).
+      { assert (K : Qmult (polyQ a (Qn Ma)) (Qn (binomN (2 * Ma) Ma)) == 0)
+          by (rewrite <- HMa2; ring).
+        destruct (Qmult_integral _ _ K) as [Kk|Kk]; [exact Kk|].
+        exfalso. rewrite Kk in HC. exact (Qlt_irrefl 0 HC). }
+      assert (E : Qabs (polyQ a (Qn Ma)) == 0) by (rewrite Ha0; reflexivity).
+      rewrite E in HZ.
+      assert (HX : Qlt 0 (Qn (Ma ^ nf)))
+        by (apply Qn_pos; apply nat_pow_ge1; lia).
+      nra.
+    - exfalso.
+      assert (HAz : forall j, (nf < j)%nat -> nth j a 0%Q == 0)
+        by (intros j Hj; apply nzlen_above; lia).
+      assert (HBz : forall j, (ng < j)%nat -> nth j b 0%Q == 0)
+        by (intros j Hj; apply nzlen_above; lia).
+      destruct (polyQ_lower a nf HAz) as [Ma [Ma1 HMa]].
+      destruct (polyQ_lower b ng HBz) as [Mb [Mb1 HMb]].
+      assert (HAp : Qlt 0 (Qabs (nth nf a 0%Q)))
+        by (apply Qabs_pos_of_ne; apply (nzlen_top a nf Ea)).
+      assert (HBp : Qlt 0 (Qabs (nth ng b 0%Q)))
+        by (apply Qabs_pos_of_ne; apply (nzlen_top b ng Eb)).
+      assert (HKa := sumabs_nonneg (firstn (S nf) a)).
+      assert (HKb := sumabs_nonneg (firstn (S ng) b)).
+      destruct (Nat.le_gt_cases nf ng) as [Hle|Hgt].
+      + apply (no_linear_bound
+                 (Qmult 3 (Qmult (Qabs (nth ng b 0%Q)) (Qabs (nth ng b 0%Q))))
+                 (Qmult 4 (Qmult (sumabs (firstn (S nf) a))
+                                 (sumabs (firstn (S nf) a))))
+                 (Nat.max 1 (Nat.max Ma Mb))); [nra|].
+        intros M HM.
+        assert (HM1 : (1 <= M)%nat) by lia.
+        assert (HQM : Qle 0 (Qn M)) by apply Qn_nonneg.
+        assert (HX : Qlt 0 (Qn (M ^ ng)))
+          by (apply Qn_pos; apply nat_pow_ge1; exact HM1).
+        assert (S1 := proj1 (Hs M)).
+        assert (E3 : Qn (3 * M + 1)%nat == Qplus (Qmult 3 (Qn M)) 1)
+          by (rewrite Qn_lin, Qn3, Qn_1; reflexivity).
+        rewrite E3 in S1.
+        assert (U := polyQ_upper_deg a nf M HM1 HAz).
+        assert (Pow : Qle (Qn (M ^ nf)) (Qn (M ^ ng)))
+          by (apply Qn_le; apply Nat.pow_le_mono_r; lia).
+        assert (L := HMb M ltac:(lia)).
+        assert (HBnn := Qabs_nonneg (polyQ b (Qn M))).
+        assert (HAnn := Qabs_nonneg (polyQ a (Qn M))).
+        assert (HAsq : Qle (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                           (Qmult (Qmult (sumabs (firstn (S nf) a))
+                                         (sumabs (firstn (S nf) a)))
+                                  (Qmult (Qn (M ^ ng)) (Qn (M ^ ng))))).
+        { rewrite (Qsq_abs (polyQ a (Qn M))).
+          assert (HU2 : Qle (Qabs (polyQ a (Qn M)))
+                            (Qmult (sumabs (firstn (S nf) a)) (Qn (M ^ ng))))
+            by nra.
+          nra. }
+        assert (HBsq : Qle (Qmult (Qmult (Qabs (nth ng b 0%Q))
+                                         (Qabs (nth ng b 0%Q)))
+                                  (Qmult (Qn (M ^ ng)) (Qn (M ^ ng))))
+                           (Qmult 4 (Qmult (polyQ b (Qn M))
+                                           (polyQ b (Qn M))))).
+        { rewrite (Qsq_abs (polyQ b (Qn M))).
+          assert (Hnn : Qle 0 (Qmult (Qabs (nth ng b 0%Q)) (Qn (M ^ ng))))
+            by nra.
+          nra. }
+        apply (Qcancel_le_r _ _ (Qmult (Qn (M ^ ng)) (Qn (M ^ ng)))); [nra|].
+        assert (HBB : Qle 0 (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))) by nra.
+        assert (Hmid : Qle (Qmult (Qmult 3 (Qn M))
+                                  (Qmult (Qmult (Qabs (nth ng b 0%Q))
+                                                (Qabs (nth ng b 0%Q)))
+                                         (Qmult (Qn (M ^ ng)) (Qn (M ^ ng)))))
+                           (Qmult 4 (Qmult (polyQ a (Qn M))
+                                           (polyQ a (Qn M))))).
+        { assert (K2 : Qle (Qmult (Qmult 3 (Qn M))
+                                  (Qmult (polyQ b (Qn M)) (polyQ b (Qn M))))
+                           (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))) by nra.
+          nra. }
+        nra.
+      + apply (no_linear_bound
+                 (Qmult (Qabs (nth nf a 0%Q)) (Qabs (nth nf a 0%Q)))
+                 (Qmult 20 (Qmult (sumabs (firstn (S ng) b))
+                                  (sumabs (firstn (S ng) b))))
+                 (Nat.max 1 (Nat.max Ma Mb))); [nra|].
+        intros M HM.
+        assert (HM1 : (1 <= M)%nat) by lia.
+        assert (HQM1 : Qle 1 (Qn M)) by (rewrite <- Qn_1; apply Qn_le; lia).
+        assert (HQM : Qle 0 (Qn M)) by apply Qn_nonneg.
+        assert (HX : Qlt 0 (Qn (M ^ ng)))
+          by (apply Qn_pos; apply nat_pow_ge1; exact HM1).
+        assert (S2 := proj2 (Hs M)).
+        assert (E4 : Qn (4 * M + 1)%nat == Qplus (Qmult 4 (Qn M)) 1)
+          by (rewrite Qn_lin, Qn4, Qn_1; reflexivity).
+        rewrite E4 in S2.
+        assert (U := polyQ_upper_deg b ng M HM1 HBz).
+        assert (L := HMa M ltac:(lia)).
+        assert (Pow : Qle (Qmult (Qn M) (Qn (M ^ ng))) (Qn (M ^ nf))).
+        { assert (E : Qn (M ^ S ng) == Qmult (Qn M) (Qn (M ^ ng)))
+            by (cbn [Nat.pow]; rewrite Qn_mul; reflexivity).
+          rewrite <- E. apply Qn_le. apply Nat.pow_le_mono_r; lia. }
+        assert (HBnn := Qabs_nonneg (polyQ b (Qn M))).
+        assert (HAnn := Qabs_nonneg (polyQ a (Qn M))).
+        assert (HBsq : Qle (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))
+                           (Qmult (Qmult (sumabs (firstn (S ng) b))
+                                         (sumabs (firstn (S ng) b)))
+                                  (Qmult (Qn (M ^ ng)) (Qn (M ^ ng))))).
+        { rewrite (Qsq_abs (polyQ b (Qn M))). nra. }
+        assert (HQX : Qle 0 (Qmult (Qn M) (Qn (M ^ ng)))) by nra.
+        assert (HXX : Qlt 0 (Qmult (Qn (M ^ ng)) (Qn (M ^ ng)))) by nra.
+        assert (HAsq : Qle (Qmult (Qmult (Qabs (nth nf a 0%Q))
+                                         (Qabs (nth nf a 0%Q)))
+                                  (Qmult (Qmult (Qn M) (Qn (M ^ ng)))
+                                         (Qmult (Qn M) (Qn (M ^ ng)))))
+                           (Qmult 4 (Qmult (polyQ a (Qn M))
+                                           (polyQ a (Qn M))))).
+        { rewrite (Qsq_abs (polyQ a (Qn M))).
+          assert (HL2 : Qle (Qmult (Qabs (nth nf a 0%Q))
+                                   (Qmult (Qn M) (Qn (M ^ ng))))
+                            (Qmult 2 (Qabs (polyQ a (Qn M))))) by nra.
+          assert (Hnn : Qle 0 (Qmult (Qabs (nth nf a 0%Q))
+                                     (Qmult (Qn M) (Qn (M ^ ng))))) by nra.
+          nra. }
+        apply (Qcancel_le_r _ _ (Qmult (Qn M)
+                                       (Qmult (Qn (M ^ ng)) (Qn (M ^ ng)))));
+          [nra|].
+        assert (HBB : Qle 0 (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))) by nra.
+        assert (Hmid : Qle (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                           (Qmult (Qmult 5 (Qn M))
+                                  (Qmult (Qmult (sumabs (firstn (S ng) b))
+                                                (sumabs (firstn (S ng) b)))
+                                         (Qmult (Qn (M ^ ng))
+                                                (Qn (M ^ ng)))))).
+        { assert (K1 : Qle (Qmult (polyQ a (Qn M)) (polyQ a (Qn M)))
+                           (Qmult (Qmult 5 (Qn M))
+                                  (Qmult (polyQ b (Qn M)) (polyQ b (Qn M)))))
+            by nra.
+          nra. }
+        nra. }
+  destruct Hkey as [Ha0 Hb0].
+  split; intro j; apply nzlen_above; lia.
+Qed.
+
+(* Hence the coefficient lists a Diagonal carries are determined. *)
+
+Lemma polyQ_nth_eq : forall c c' x,
+  (forall j, nth j c 0%Q == nth j c' 0%Q) -> polyQ c x == polyQ c' x.
+Proof.
+  induction c as [|u c IH]; intros c' x H.
+  - cbn [polyQ]. symmetry. apply polyQ_zero_list. intro j.
+    assert (K := H j). rewrite nth_nil in K. rewrite <- K. reflexivity.
+  - destruct c' as [|v c'].
+    + assert (Hc : polyQ c x == polyQ (@nil Q) x).
+      { apply IH. intro j. assert (K := H (S j)). cbn [nth] in K.
+        rewrite nth_nil. exact K. }
+      assert (Hu : u == 0).
+      { assert (K := H 0%nat). cbn [nth] in K. exact K. }
+      cbn [polyQ] in *. rewrite Hc, Hu. ring.
+    + assert (Hc : polyQ c x == polyQ c' x)
+        by (apply IH; intro j; exact (H (S j))).
+      assert (Hu : u == v) by (assert (K := H 0%nat); cbn [nth] in K; exact K).
+      cbn [polyQ]. rewrite Hc, Hu. reflexivity.
+Qed.
+
+Theorem diagonal_unique : forall d (Dg Dg' : Diagonal d),
+  (forall j, nth j (dp d Dg) 0%Q == nth j (dp d Dg') 0%Q)
+  /\ (forall j, nth j (dq d Dg) 0%Q == nth j (dq d Dg') 0%Q).
+Proof.
+  intros d Dg Dg'.
+  assert (H : forall M : nat,
+    Qplus (Qmult (polyQ (psub (dp d Dg) (dp d Dg')) (Qn M))
+                 (Qn (binomN (2 * M) M)))
+          (Qmult (polyQ (psub (dq d Dg) (dq d Dg')) (Qn M))
+                 (Qn (4 ^ M))) == 0).
+  { intro M. rewrite !psub_spec.
+    assert (K1 := d_law d Dg M). assert (K2 := d_law d Dg' M).
+    rewrite K1 in K2.
+    setoid_replace
+      (Qplus (Qmult (Qminus (polyQ (dp d Dg) (Qn M)) (polyQ (dp d Dg') (Qn M)))
+                    (Qn (binomN (2 * M) M)))
+             (Qmult (Qminus (polyQ (dq d Dg) (Qn M)) (polyQ (dq d Dg') (Qn M)))
+                    (Qn (4 ^ M))))
+      with (Qminus
+              (Qplus (Qmult (polyQ (dp d Dg) (Qn M)) (Qn (binomN (2 * M) M)))
+                     (Qmult (polyQ (dq d Dg) (Qn M)) (Qn (4 ^ M))))
+              (Qplus (Qmult (polyQ (dp d Dg') (Qn M)) (Qn (binomN (2 * M) M)))
+                     (Qmult (polyQ (dq d Dg') (Qn M)) (Qn (4 ^ M)))))
+      by ring.
+    rewrite K2. ring. }
+  destruct (two_term_indep _ _ H) as [Ha Hb].
+  split; intro j.
+  - assert (K := Ha j). rewrite nth_psub in K.
+    setoid_replace (nth j (dp d Dg) 0%Q)
+      with (Qplus (Qminus (nth j (dp d Dg) 0%Q) (nth j (dp d Dg') 0%Q))
+                  (nth j (dp d Dg') 0%Q)) by ring.
+    rewrite K. ring.
+  - assert (K := Hb j). rewrite nth_psub in K.
+    setoid_replace (nth j (dq d Dg) 0%Q)
+      with (Qplus (Qminus (nth j (dq d Dg) 0%Q) (nth j (dq d Dg') 0%Q))
+                  (nth j (dq d Dg') 0%Q)) by ring.
+    rewrite K. ring.
+Qed.
+
+Corollary diagonal_unique_poly : forall d (Dg Dg' : Diagonal d) x,
+  polyQ (dp d Dg) x == polyQ (dp d Dg') x
+  /\ polyQ (dq d Dg) x == polyQ (dq d Dg') x.
+Proof.
+  intros d Dg Dg' x. destruct (diagonal_unique d Dg Dg') as [Hp Hq].
+  split; apply polyQ_nth_eq; assumption.
+Qed.
+
+(* The results proved at a constructed record now hold at every inhabitant.
+   At d = 1 the record exists outright, so these are unconditional. *)
+
+Theorem p_lead_one_any : forall Dg : Diagonal 1,
+  Qmult (Qn (factn 1)) (nth 0 (dp 1 Dg) 0%Q) == 1.
+Proof.
+  intro Dg. destruct (diagonal_unique 1 Dg diagonal_one) as [Hp _].
+  rewrite (Hp 0%nat). reflexivity.
+Qed.
+
+Theorem R_at_minus_one_one_any : forall Dg : Diagonal 1,
+  Qminus (polyQ (dp 1 Dg) 0) (polyQ (dq 1 Dg) 0) == 1.
+Proof.
+  intro Dg. destruct (diagonal_unique_poly 1 Dg diagonal_one 0) as [Hp Hq].
+  assert (E1 : dp 1 diagonal_one = 1%Q :: nil) by reflexivity.
+  assert (E2 : dq 1 diagonal_one = @nil Q) by reflexivity.
+  rewrite Hp, Hq, E1, E2. cbn [polyQ]. ring.
+Qed.
+
+Corollary exponent_law_at_zero_one : forall Dg : Diagonal 1,
+  Qle (Qabs (rcoef 1 Dg 0)) (Qmult 1 (Qn (1 ^ 0))).
+Proof.
+  intro Dg. apply exponent_law_at_zero; [lia | apply p_lead_one_any].
+Qed.
+
+(* At d = 2 the record exists as soon as the increasing fibre closes, and then
+   the leading coefficient and R_d(-1) are the same at every inhabitant. *)
+
+Theorem p_lead_two_any : NSIG_TWO_CLOSED -> forall Dg : Diagonal 2,
+  Qmult (Qn (factn 2)) (nth 1 (dp 2 Dg) 0%Q) == 1.
+Proof.
+  intros HN Dg.
+  destruct (diagonal_unique 2 Dg (diagonal_two_fib HN)) as [Hp _].
+  rewrite (Hp 1%nat). exact p_lead_two.
+Qed.
+
+Theorem R_at_minus_one_two_any : NSIG_TWO_CLOSED -> forall Dg : Diagonal 2,
+  Qminus (polyQ (dp 2 Dg) 0) (polyQ (dq 2 Dg) 0) == 1.
+Proof.
+  intros HN Dg.
+  destruct (diagonal_unique_poly 2 Dg (diagonal_two_fib HN) 0) as [Hp Hq].
+  rewrite Hp, Hq. exact (R_at_minus_one_of_two HN).
+Qed.
+
+Corollary exponent_law_at_zero_two : NSIG_TWO_CLOSED -> forall Dg : Diagonal 2,
+  Qle (Qabs (rcoef 2 Dg 0)) (Qmult 1 (Qn (2 ^ 0))).
+Proof.
+  intros HN Dg. apply exponent_law_at_zero; [lia | apply p_lead_two_any; exact HN].
+Qed.

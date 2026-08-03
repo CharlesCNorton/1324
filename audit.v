@@ -90,7 +90,7 @@ Print Assumptions card132_ratio_of_binom.
 Print Assumptions card132_ratio_upto_6.
 Print Assumptions card132_binom_upto_7.
 (* (m+1) card132 m against C(2m,m), at every size the enumerator reaches *)
-Compute (map (fun m => (S m * card132 m, binomN (2 * m) m)) (seq 0 8)).
+Compute (map (fun m => (S m * card132f m, binomN (2 * m) m)) (seq 0 8)).
 Print Assumptions strict_dec_sortedD.
 Print Assumptions dec_std_conv.
 Print Assumptions dec_fibre_iff.
@@ -124,14 +124,14 @@ Print Assumptions invcount_pinv.
 (* 201 and its inverse 120 both have two inversions *)
 Compute (invcount (2 :: 0 :: 1 :: nil), invcount (pinv (2 :: 0 :: 1 :: nil))).
 (* the inversion strata of Av(132)_4, which the involution permutes *)
-Compute (map invcount (gen132 4)).
+Compute (map invcount (gen132f 4)).
 Print Assumptions nfold_perm.
 Print Assumptions nfold_map.
 Print Assumptions pqd_totals_agree.
 Print Assumptions pqd_suffices.
 Print Assumptions sV_cov_pair_form.
 (* the two coordinate totals of pqd_pairs agree at m = 4 *)
-Compute (sumA (pqd_pairs 4), sumB (pqd_pairs 4)).
+Compute (sumA (pqd_pairsf 4), sumB (pqd_pairsf 4)).
 (* 201 inverts to 120, and back *)
 Compute (pinv (2 :: 0 :: 1 :: nil), pinv (pinv (2 :: 0 :: 1 :: nil))).
 Print Assumptions dedup_snd_incl.
@@ -142,26 +142,27 @@ Print Assumptions incl_map_of.
 Print Assumptions witness_19.
 Print Assumptions no_coarsening.
 (* 23 avoiders of length 4, 19 distinct one-step lookaheads, 16 states allowed *)
-Compute (length (gen 4), length (dedup_snd phipairs), Nat.pow 2 4).
+Compute (length (genf 4), length (dedup_snd phipairs), Nat.pow 2 4).
 (* the statistic behind the correlation inequality, and its transpose *)
-Compute (pqd_pairs 3).
+Compute (pqd_pairsf 3).
 Compute (map (fun d => length (choose 5 d)) (seq 0 6)).
 (* the convolution, checked numerically: 42 = 14+5+4+5+14 *)
-Compute (card132 5,
-         fold_right (fun k acc => (card132 k * card132 (4 - k) + acc)%nat)
+Compute (card132f 5,
+         fold_right (fun k acc => (card132f k * card132f (4 - k) + acc)%nat)
                     0%nat (seq 0 5)).
 (* the enumerator must reproduce the Catalan numbers *)
-Compute (card132 0, card132 1, card132 2, card132 3, card132 4, card132 5).
-Compute (card132 6, card 6).
+Compute (card132f 0, card132f 1, card132f 2, card132f 3, card132f 4,
+         card132f 5).
+Compute (card132f 6, cardf 6).
 Print Assumptions foldZ_pick_one.
 Print Assumptions foldZ_add.
 Print Assumptions csum_fibres.
 (* summing Pstat over the inversion strata of Av(132)_4 recovers the total *)
-Compute (csum (map Pz (gen132 4)),
+Compute (csum (map Pz (gen132f 4)),
          foldZ (fun k => csum (map Pz
                   (filter (fun b => if Nat.eq_dec (invcount b) k
-                                    then true else false) (gen132 4))))
-               (nodup Nat.eq_dec (map invcount (gen132 4)))).
+                                    then true else false) (gen132f 4))))
+               (invkeysf 4)).
 Print Assumptions cov_symmetric_split.
 Print Assumptions sym_antisym_orthogonal.
 Print Assumptions var_splits.
@@ -187,9 +188,9 @@ Print Assumptions ssumz_map_strata.
 Print Assumptions strata_S_total.
 Print Assumptions strata_P_total.
 (* the inversion strata of Av(132)_4 and their sizes: 1,3,3,3,2,1,1 over 14 *)
-Compute (invkeys 4, map (fun k => length (invfibre 4 k)) (invkeys 4)).
+Compute (invkeysf 4, map (fun k => length (invfibref 4 k)) (invkeysf 4)).
 (* the split at m = 4 for sV, the corner a = c = 2: total, within, between *)
-Compute (let l := strata_of Pz 4 in
+Compute (let l := strata_off Pz 4 in
          ((nprodz (proj_ns l) * (nsumz (proj_ns l) * stP l
                                  - ssumz (proj_ns l) * ssumz (proj_ns l)))%Z,
           (nsumz (proj_ns l) * defw l)%Z,
@@ -228,7 +229,7 @@ Print Assumptions cell_close.
 Print Assumptions dsum_avoids.
 Print Assumptions dsum_132_gives_1324.
 Compute (skew [1;0] [0;2;1]).
-Compute (card 2 * card 3, card 5).
+Compute (cardf 2 * cardf 3, cardf 5).
 Print Assumptions block_split_1324.
 Print Assumptions candidates_low.
 Print Assumptions candidates_high.
@@ -264,8 +265,8 @@ Print Assumptions above_213_iff.
 Print Assumptions cons_1324_above.
 Print Assumptions cons_1324_above_avoid.
 Print Assumptions cons_min_1324.
-Compute card 0. Compute card 1. Compute card 2.
-Compute card 3. Compute card 4. Compute card 5.
+Compute cardf 0. Compute cardf 1. Compute cardf 2.
+Compute cardf 3. Compute cardf 4. Compute cardf 5.
 Print Assumptions sub_1324_213.
 Print Assumptions cons_min_1324.
 Print Assumptions rc_involutive.
@@ -287,8 +288,9 @@ Print Assumptions mfun_append_new.
 Print Assumptions gen_extend.
 Print Assumptions card_extend.
 Print Assumptions card_extend_one.
-Compute card (2 + 3).
-Compute fold_right (fun u acc => (length (extend u 2 3) + acc)%nat) 0%nat (gen 2).
+Compute cardf (2 + 3).
+Compute fold_right (fun u acc => (length (extend u 2 3) + acc)%nat) 0%nat
+                   (genf 2).
 Print Assumptions binomZ_step.
 Print Assumptions binomZ_pivot.
 Print Assumptions Ssum_rec.
@@ -390,60 +392,60 @@ Print Assumptions flatten_pat.
 Print Assumptions flatten_inj.
 Print Assumptions Nsig_le_dec.
 Print Assumptions Ddiag_partition.
-Compute (Nsig 3 2 (0::1::2::nil), Nsig 3 2 (decpat 3)).
+Compute (Nsigf 3 2 (0::1::2::nil), Nsigf 3 2 (decpat 3)).
 Compute suffix_pat 3 (0::3::1::2::nil).
-Compute Ddiag 3 0.
-Compute card 3.
-Compute Ddiag 2 1.
-Compute Nsig 2 1 (0::1::nil).
-Compute Nsig 2 1 (1::0::nil).
-Compute Ddiag 3 0.
-Compute Ddiag 2 1.
-Compute Ddiag 2 2.
-Compute Ddiag 1 3.
-Compute (Nsig 2 1 (0::1::nil) + Nsig 2 1 (1::0::nil))%nat.
-Compute (Nsig 3 1 (2::1::0::nil)).
+Compute Ddiagf 3 0.
+Compute cardf 3.
+Compute Ddiagf 2 1.
+Compute Nsigf 2 1 (0::1::nil).
+Compute Nsigf 2 1 (1::0::nil).
+Compute Ddiagf 3 0.
+Compute Ddiagf 2 1.
+Compute Ddiagf 2 2.
+Compute Ddiagf 1 3.
+Compute (Nsigf 2 1 (0::1::nil) + Nsigf 2 1 (1::0::nil))%nat.
+Compute (Nsigf 3 1 (2::1::0::nil)).
 
 (* The decreasing sigma is unconstrained by decreasing_tail_avoids, so its count
    is a free product: choose which d values form the suffix, then any 132-free
    prefix pattern.  Nsig d M dec = Cat(M) * C(M+d, d). *)
-Compute (Nsig 2 2 (1::0::nil)).          (* Cat 2 * C(4,2) = 2*6  = 12 *)
-Compute (Nsig 3 2 (2::1::0::nil)).       (* Cat 2 * C(5,3) = 2*10 = 20 *)
-Compute (Nsig 2 3 (1::0::nil)).          (* Cat 3 * C(5,2) = 5*10 = 50 *)
-Compute (Nsig 4 1 (3::2::1::0::nil)).    (* Cat 1 * C(5,4) = 1*5  = 5  *)
+Compute (Nsigf 2 2 (1::0::nil)).         (* Cat 2 * C(4,2) = 2*6  = 12 *)
+Compute (Nsigf 3 2 (2::1::0::nil)).      (* Cat 2 * C(5,3) = 2*10 = 20 *)
+Compute (Nsigf 2 3 (1::0::nil)).         (* Cat 3 * C(5,2) = 5*10 = 50 *)
+Compute (Nsigf 4 1 (3::2::1::0::nil)).   (* Cat 1 * C(5,4) = 1*5  = 5  *)
 
 (* Ddiag_partition at M = 0 forces p_sigma(0) + q_sigma(0) = 1 for every sigma
    that occurs: N_sigma(0) is 1 when sigma avoids 1324 and 0 otherwise, and the
    partition sums them to card d.  The decreasing sigma puts its whole unit on
    the Catalan term; the fitted data says every other sigma splits it evenly. *)
-Compute (Nsig 3 0 (2::1::0::nil)).       (* decreasing, avoids 1324    -> 1 *)
-Compute (Nsig 3 0 (0::1::2::nil)).       (* increasing, avoids 1324    -> 1 *)
-Compute (Nsig 4 0 (0::2::1::3::nil)).    (* the pattern 1324 itself    -> 0 *)
-Compute (Ddiag 4 0, card 4).             (* the partition totals agree      *)
+Compute (Nsigf 3 0 (2::1::0::nil)).      (* decreasing, avoids 1324    -> 1 *)
+Compute (Nsigf 3 0 (0::1::2::nil)).      (* increasing, avoids 1324    -> 1 *)
+Compute (Nsigf 4 0 (0::2::1::3::nil)).   (* the pattern 1324 itself    -> 0 *)
+Compute (Ddiagf 4 0, cardf 4).           (* the partition totals agree      *)
 
 (* d = 2 closes in full: N_10(M) = Cat(M) C(M+2,2) and
    N_01(M) = (C(2M,M) + 4^M)/2, the lower half of row 2M of Pascal. *)
-Compute (Nsig 2 2 (0::1::nil)).          (* (C(4,2) + 16)/2 = (6+16)/2  = 11 *)
-Compute (Nsig 2 3 (0::1::nil)).          (* (C(6,3) + 64)/2 = (20+64)/2 = 42 *)
-Compute (Ddiag 2 3, (50 + 42)%nat).      (* the two pieces total D(2,3) = 92 *)
+Compute (Nsigf 2 2 (0::1::nil)).         (* (C(4,2) + 16)/2 = (6+16)/2  = 11 *)
+Compute (Nsigf 2 3 (0::1::nil)).         (* (C(6,3) + 64)/2 = (20+64)/2 = 42 *)
+Compute (Ddiagf 2 3, (50 + 42)%nat).     (* the two pieces total D(2,3) = 92 *)
 
 (* d = 3 in full at M = 2: the six patterns and their total, card 5. *)
-Compute (Nsig 3 2 (0::1::2::nil)).       (* 17 *)
-Compute (Nsig 3 2 (0::2::1::nil)).       (* 18 *)
-Compute (Nsig 3 2 (1::0::2::nil)).       (* 11 *)
-Compute (Nsig 3 2 (1::2::0::nil)).       (* 18 *)
-Compute (Nsig 3 2 (2::0::1::nil)).       (* 19 *)
-Compute (Nsig 3 2 (2::1::0::nil)).       (* 20 *)
-Compute (Ddiag 3 2, card 5).             (* (103, 103) *)
+Compute (Nsigf 3 2 (0::1::2::nil)).      (* 17 *)
+Compute (Nsigf 3 2 (0::2::1::nil)).      (* 18 *)
+Compute (Nsigf 3 2 (1::0::2::nil)).      (* 11 *)
+Compute (Nsigf 3 2 (1::2::0::nil)).      (* 18 *)
+Compute (Nsigf 3 2 (2::0::1::nil)).      (* 19 *)
+Compute (Nsigf 3 2 (2::1::0::nil)).      (* 20 *)
+Compute (Ddiagf 3 2, cardf 5).           (* (103, 103) *)
 
 (* d = 4 at M = 2, against the closed forms.
    0123: p = 1/2+3M/4, q = 1/2+M/8   -> 2*C(4,2) + (3/4)*16      = 24
    2013: p = 1/2,      q = 1/2       -> 3 + 8                    = 11
    3210: Cat(2)*C(6,4)               -> 2*15                     = 30 *)
-Compute (Nsig 4 2 (0::1::2::3::nil)).
-Compute (Nsig 4 2 (2::0::1::3::nil)).
-Compute (Nsig 4 2 (3::2::1::0::nil)).
-Compute (Ddiag 4 2, card 6).
+Compute (Nsigf 4 2 (0::1::2::3::nil)).
+Compute (Nsigf 4 2 (2::0::1::3::nil)).
+Compute (Nsigf 4 2 (3::2::1::0::nil)).
+Compute (Ddiagf 4 2, cardf 6).
 
 Print Assumptions in_idxs.
 Print Assumptions contains132b_spec.
@@ -456,10 +458,10 @@ Print Assumptions dominoes_locell_132.
 Print Assumptions Dcount_fibres.
 (* the balanced vertical domino counts, straight from 1324-avoidance:
    the held values are 2, 23, 424, 9751 *)
-Compute (Dcount 1 1, Dcount 2 2, Dcount 3 3).
+Compute (Dcountf 1 1, Dcountf 2 2, Dcountf 3 3).
 (* at the smallest outer cell d_A is C(b+2,2) + sV, cell by cell and not
    merely on average: 20,19,18,18,17 against 10,9,8,8,7 with C(5,2) = 10 *)
-Compute (map (dA 2 3) (gen132 3), map Pstat (gen132 3)).
+Compute (map (dAf 2 3) (gen132f 3), map Pstat (gen132f 3)).
 
 Print Assumptions locell_is_perm.
 Print Assumptions dominoes_locell_gen132.
@@ -474,7 +476,7 @@ Print Assumptions hicell_213_pos.
 Print Assumptions dec_cell_domino.
 Print Assumptions dec_cell_iff.
 (* d_A(dec, a) against C(a+3,a) Cat(a) at a = 0..3: 1, 4, 20, 100 *)
-Compute (map (fun a => (dA a 3 (decpat 3), (binomN (a + 3) a * card132 a)%nat))
+Compute (map (fun a => (dAf a 3 (decpat 3), (binomN (a + 3) a * card132f a)%nat))
              (seq 0 4)).
 Print Assumptions Dcount_over_gen132.
 Print Assumptions lookup_map_pair.
@@ -486,7 +488,7 @@ Print Assumptions diag_between_nonneg.
 Print Assumptions diag_S_total.
 Print Assumptions diag_P_total.
 (* the diagonal statistic itself, over the lower cells of Av(132)_3 *)
-Compute (map (dA 3 3) (gen132 3)).
+Compute (map (dAf 3 3) (gen132f 3)).
 
 Print Assumptions sumAB_map.
 Print Assumptions diag_length.
@@ -526,7 +528,7 @@ Print Assumptions chebyshev_holdsZ_eq.
 (* T(4,4,4) = 6949612 from the definition of 1324-avoidance, held value.
    Tcount rebuilds the domino list per lookup, Tz tabulates it once and stays
    in Z, since seven million unary constructors exhaust the VM. *)
-Compute (Tz 3).
+Compute (Tzf 3).
 (* The mu-based enumerators, and the four m = 4 statements they carry.  Every
    reduction below routes through them: genf hoists mu out of the inner loop
    and gen132f replaces the O(n^2) safety decider by the O(n) prefix test, and
@@ -553,7 +555,7 @@ Print Assumptions csum_const.
 Print Assumptions foldZ_csum.
 Print Assumptions Tcount_glued.
 Print Assumptions Tz_glued.
-Compute (Tcount 2, length (glued 2)).
+Compute (Tzf 2, length (gluedf 2)).
 Print Assumptions domino_4.
 Print Assumptions tromino_4.
 Print Assumptions chebyshev_upto_4.
@@ -565,7 +567,7 @@ Print Assumptions straight_chebyshev.
    sum d_A^2 = 36406 and sum d_A(l) d_A(l^-1) = 36325, so Cauchy-Schwarz gives
    5 * 36406 = 182030 free where the conjecture asks for 5 * 36325 = 181625,
    against D(3,3)^2 = 179776 *)
-Compute (Tstraight 3, Tcount 3).
+Compute (Tstraightf 3, Tzf 3).
 Print Assumptions filter_flat_map.
 Print Assumptions firstn_len_app.
 Print Assumptions firstn_ext.
@@ -596,7 +598,7 @@ Print Assumptions children_gen132.
 Print Assumptions children_sccounts.
 (* the triangle at m = 3: each avoider's split count and its children's *)
 Compute (map (fun u => (sccount u 3, map (fun w => sccount w 4) (children u 3)))
-             (gen132 3)).
+             (gen132f 3)).
 (* The triangle recurrence over the whole class, from the per-word statement:
    each row is the cumulative sum of the one above, and the rows sum to the
    class sizes.  Rows 1..5 are 1; 1,1; 2,2,1; 5,5,3,1; 14,14,9,4,1. *)
@@ -623,19 +625,19 @@ Print Assumptions card132_rlmax_upto_6.
    zero mismatches at every size, and the recurrence gives the Catalan numbers *)
 Compute (map (fun m => length (filter (fun u => negb (Nat.eqb (safecount u m)
                                                               (S (rlmax u))))
-                                      (gen132 m)))
+                                      (gen132f m)))
              (seq 0 6)).
-Compute (map (fun m => (card132 (S m),
+Compute (map (fun m => (card132f (S m),
                         fold_right (fun u acc => (S (rlmax u) + acc)%nat)
-                                   0%nat (gen132 m)))
+                                   0%nat (gen132f m)))
              (seq 0 6)).
 (* the d = 1 column in closed form: 1, 2, 6, 20, 70, which is (M+1) Cat(M)
    and also C(2M,M), the two-term law at d = 1 with p = 1 and q empty *)
-Compute (map (fun M => (Ddiag 1 M, S M * card132 M)) (seq 0 5)).
+Compute (map (fun M => (Ddiagf 1 M, S M * card132f M)) (seq 0 5)).
 (* the spread form at the diagonal, m = 3: the antisymmetric second moment, the
    bound the conjecture asks for, and the bound Cauchy-Schwarz gives free.
    810 <= 4508, with 9016 available without any conjecture *)
-Compute (let L := gen132 3 in let F := dAz 3 in
+Compute (let L := gen132f 3 in let F := dAlook (dAtablef 3 3) in
          ((Z.of_nat (length L)
            * csum (map (fun b => (antip F b * antip F b)%Z) L))%Z,
           (2 * (Z.of_nat (length L)
@@ -646,7 +648,7 @@ Compute (let L := gen132 3 in let F := dAz 3 in
                 - csum (map F L) * csum (map F L)))%Z)).
 (* the identity at the diagonal, m = 3: four times the covariance form, the
    symmetric term, the antisymmetric term.  7396 = 8206 - 810 *)
-Compute (let L := gen132 3 in let F := dAz 3 in
+Compute (let L := gen132f 3 in let F := dAlook (dAtablef 3 3) in
          ((4 * (Z.of_nat (length L)
                 * csum (map (fun b => (F b * F (pinv b))%Z) L)
                 - csum (map F L) * csum (map F L)))%Z,
@@ -657,7 +659,7 @@ Compute (let L := gen132 3 in let F := dAz 3 in
            * csum (map (fun b => (antip F b * antip F b)%Z) L))%Z)).
 (* the identity at m = 4 for Pstat: four times the covariance form, then the
    symmetric term and the antisymmetric term *)
-Compute (let L := gen132 4 in
+Compute (let L := gen132f 4 in
          ((4 * (Z.of_nat (length L)
                 * csum (map (fun b => (Pz b * Pz (pinv b))%Z) L)
                 - csum (map Pz L) * csum (map Pz L)))%Z,
@@ -668,19 +670,19 @@ Compute (let L := gen132 4 in
            * csum (map (fun b => (antip Pz b * antip Pz b)%Z) L))%Z)).
 (* the antisymmetric part vanishes on each stratum of Av(132)_4 and globally *)
 Compute (map (fun k => csum (map (fun b => (Pz b - Pz (pinv b))%Z)
-                                 (invfibre 4 k)))
-             (invkeys 4),
-         csum (map (fun b => (Pz b - Pz (pinv b))%Z) (gen132 4))).
+                                 (invfibref 4 k)))
+             (invkeysf 4),
+         csum (map (fun b => (Pz b - Pz (pinv b))%Z) (gen132f 4))).
 (* the balanced tromino counts, held as 4, 265, 36325 *)
-Compute (Tcount 1, Tcount 2, Tcount 3).
+Compute (Tzf 1, Tzf 2, Tzf 3).
 (* the Chebyshev square at m = 3: D(3,3)^2 against Cat(3)*T(3,3,3),
    179776 <= 181625, which is the inequality PQD would supply.  Both products
    are formed in Z; as unary nats they overflow the printer. *)
-Compute ((Z.of_nat (Dcount 3 3) * Z.of_nat (Dcount 3 3))%Z,
-         (Z.of_nat (card132 3) * Z.of_nat (Tcount 3))%Z).
+Compute ((Z.of_nat (Dcountf 3 3) * Z.of_nat (Dcountf 3 3))%Z,
+         (Z.of_nat (card132f 3) * Tzf 3)%Z).
 (* the split at the diagonal, m = 3: total, within, between, scaled by the
    product of the stratum sizes.  -405 + 4103 = 3698, share 405/4103 *)
-Compute (let l := dstrata 3 in
+Compute (let l := dstrataf 3 in
          ((nprodz (proj_ns l)
            * (nsumz (proj_ns l) * stP l
               - ssumz (proj_ns l) * ssumz (proj_ns l)))%Z,
@@ -704,15 +706,15 @@ Print Assumptions card132_binom.
 Print Assumptions Ddiag_one_binom.
 Print Assumptions diagonal_one.
 (* the ratio, both sides, at every size the enumerator reaches *)
-Compute (map (fun m => ((S (S m) * card132 (S m))%nat,
-                        (2 * (2 * m + 1) * card132 m)%nat)) (seq 0 6)).
+Compute (map (fun m => ((S (S m) * card132f (S m))%nat,
+                        (2 * (2 * m + 1) * card132f m)%nat)) (seq 0 6)).
 (* the closed count (m+1) card132 m = C(2m,m) *)
-Compute (map (fun m => ((S m * card132 m)%nat, binomN (2 * m) m)) (seq 0 8)).
+Compute (map (fun m => ((S m * card132f m)%nat, binomN (2 * m) m)) (seq 0 8)).
 (* the weighted convolution wsum S m = (2m+1) Cat(m) = C(2m+1,m) *)
-Compute (map (fun m => (wsum S m, ((2 * m + 1) * card132 m)%nat,
+Compute (map (fun m => (wsum S m, ((2 * m + 1) * card132f m)%nat,
                         binomN (2 * m + 1) m)) (seq 0 6)).
 (* the d = 1 diagonal: Ddiag 1 M = C(2M,M), and the coefficient lists it carries *)
-Compute (map (fun M => (Ddiag 1 M, binomN (2 * M) M)) (seq 0 5)).
+Compute (map (fun M => (Ddiagf 1 M, binomN (2 * M) M)) (seq 0 5)).
 Compute (dp 1 diagonal_one, dq 1 diagonal_one).
 
 (* ---- Av(213) as the other cell class, and the decreasing cell counted ---- *)
@@ -747,20 +749,20 @@ Print Assumptions dec_cell_recover.
 Print Assumptions dA_dec.
 Print Assumptions dA_dec_catalan.
 (* Av(213) is Catalan, cell for cell against Av(132) *)
-Compute (map (fun m => (card213 m, card132 m)) (seq 0 6)).
+Compute (map (fun m => (card213 m, card132f m)) (seq 0 6)).
 (* masks of length n with a true entries are Pascal's triangle *)
 Compute (map (fun n => map (fun a => length (bwords n a)) (seq 0 (S n))) (seq 0 5)).
 (* the decreasing cell of d_A at b = 3: 1, 4, 20, 100 against C(a+3,a) Cat(a) *)
-Compute (map (fun a => (dA a 3 (decpat 3), (binomN (a + 3) a * card213 a)%nat))
+Compute (map (fun a => (dAf a 3 (decpat 3), (binomN (a + 3) a * card132f a)%nat))
              (seq 0 4)).
 (* and at b = 2 and b = 4 *)
-Compute (map (fun a => (dA a 2 (decpat 2), (binomN (a + 2) a * card213 a)%nat))
+Compute (map (fun a => (dAf a 2 (decpat 2), (binomN (a + 2) a * card132f a)%nat))
              (seq 0 4)).
-Compute (map (fun a => (dA a 4 (decpat 4), (binomN (a + 4) a * card213 a)%nat))
+Compute (map (fun a => (dAf a 4 (decpat 4), (binomN (a + 4) a * card132f a)%nat))
              (seq 0 3)).
 (* the branching identity with the fibre count evaluated: card 1 .. card 5 *)
 Compute (map (fun m => fold_right (fun u acc => (mucount u m + acc)%nat) 0%nat
-                                  (gen m)) (seq 0 5)).
+                                  (genf m)) (seq 0 5)).
 
 (* ---- Increasing lists, standardisation, and the decreasing suffix fibre ---- *)
 Print Assumptions incr_cons_min.
@@ -808,11 +810,13 @@ Print Assumptions Nsig_dec_catalan.
 Print Assumptions Nsig_le_free.
 Print Assumptions Ddiag_ge_free.
 (* N_dec(M) = Cat(M) C(M+d,d), at d = 2 and d = 3 *)
-Compute (map (fun M => (Nsig 2 M (decpat 2), (binomN (M + 2) 2 * card132 M)%nat))
+Compute (map (fun M => (Nsigf 2 M (decpat 2),
+                        (binomN (M + 2) 2 * card132f M)%nat))
              (seq 0 5)).
-Compute (map (fun M => (Nsig 3 M (decpat 3), (binomN (M + 3) 3 * card132 M)%nat))
+Compute (map (fun M => (Nsigf 3 M (decpat 3),
+                        (binomN (M + 3) 3 * card132f M)%nat))
              (seq 0 4)).
-Compute (Nsig 4 1 (decpat 4), (binomN 5 4 * card132 1)%nat).
+Compute (Nsigf 4 1 (decpat 4), (binomN 5 4 * card132f 1)%nat).
 
 (* ---- Balanced trominoes as gridded permutations of [0,3m) ---- *)
 Print Assumptions trominoes_spec.
@@ -821,9 +825,9 @@ Print Assumptions Trominof_eq.
 Print Assumptions tromino_count_1.
 Print Assumptions tromino_count_2.
 (* the objects themselves, against Tcount *)
-Compute (Tromino 0, Tcount 0).
-Compute (Tromino 1, Tcount 1).
-Compute (Tromino 2, Tcount 2).
+Compute (Trominof 0, Tzf 0).
+Compute (Trominof 1, Tzf 1).
+Compute (Trominof 2, Tzf 2).
 
 (* ---- Standardisation as a class map, and the tromino/glued correspondence ---- *)
 Print Assumptions subseq_refl.
@@ -874,7 +878,7 @@ Print Assumptions tromino_le_Tcount.
 Print Assumptions locell_1324_pos.
 Print Assumptions domino_cellsizes.
 (* the pair a tromino determines, at m = 2: every one lands in glued *)
-Compute (length (glued 2), Tromino 2).
+Compute (length (gluedf 2), Trominof 2).
 
 (* ---- The pair-to-tromino construction, closing the correspondence ---- *)
 Print Assumptions locell_as_negb.
@@ -902,9 +906,9 @@ Print Assumptions flatlo_in.
 Print Assumptions dA_le_dec.
 Print Assumptions dA_le_free.
 (* the maximum of d_A on the diagonal, against C(2m,m) Cat(m) *)
-Compute (map (fun m => (fold_right (fun l acc => Nat.max (dA m m l) acc) 0%nat
-                                   (gen132 m),
-                        (binomN (m + m) m * card213 m)%nat)) (seq 1 4)).
+Compute (map (fun m => (fold_right (fun l acc => Nat.max (dAf m m l) acc) 0%nat
+                                   (gen132f m),
+                        (binomN (m + m) m * card132f m)%nat)) (seq 1 4)).
 
 (* ---- PQD at a threshold whose up-set is closed under the involution ---- *)
 Print Assumptions decpat_pinv.
@@ -943,7 +947,7 @@ Print Assumptions dA_lt_dec.
 Print Assumptions dA_dec_pos.
 Print Assumptions pqd_diag_top.
 Compute (insword 3 0 2 (decpat 3)).
-Compute (map (fun l => dA 2 3 l) (gen132 3)).
+Compute (map (fun l => dAf 2 3 l) (gen132f 3)).
 
 (* ---- the m = 5 computations ---- *)
 Print Assumptions domino_5.
@@ -972,7 +976,7 @@ Print Assumptions fold_Nsig_le.
 Print Assumptions suffix_pat_in_gen.
 Print Assumptions Ddiag_le_dec.
 Print Assumptions Ddiag_sandwich.
-Compute (map (fun M => (Nsig 2 M [0; 1], (binomN (2 * M) M + 4 ^ M) / 2)%nat)
+Compute (map (fun M => (Nsigf 2 M [0; 1], (binomN (2 * M) M + 4 ^ M) / 2)%nat)
               (seq 0 5)).
 
 (* ---- the decreasing suffix fibre's two-term law ---- *)
@@ -990,7 +994,7 @@ Print Assumptions pdec_one_diagonal.
 Print Assumptions diagonal_ge_dec.
 Print Assumptions diagonal_le_dec.
 (* (M+1) p_dec(M) against C(M+d,d) at d = 3, and the fibre itself *)
-Compute (map (fun M => Nsig 3 M (decpat 3)) (seq 0 4)).
+Compute (map (fun M => Nsigf 3 M (decpat 3)) (seq 0 4)).
 Compute (map (fun M => (binomN (M + 3) 3, binomN (M + 4) 4)) (seq 0 5)).
 Compute (pdec 1, pdec 2, pdec 3).
 
@@ -1001,8 +1005,8 @@ Print Assumptions nsig_two_closed_of_rec.
 Print Assumptions nsig_two_rec_of_closed.
 Print Assumptions diagonal_two_rec.
 (* N_01(M+1) + Cat(M) against 4 N_01(M) *)
-Compute (map (fun M => (Nsig 2 (S M) [0; 1] + card132 M,
-                        4 * Nsig 2 M [0; 1])%nat) (seq 0 4)).
+Compute (map (fun M => (Nsigf 2 (S M) [0; 1] + card132f M,
+                        4 * Nsigf 2 M [0; 1])%nat) (seq 0 4)).
 
 (* ---- the two-term law fibre by fibre ---- *)
 Print Assumptions nth_repeat0.
@@ -1078,7 +1082,7 @@ Print Assumptions card132_le_pow4.
 Print Assumptions Qn_pos.
 Print Assumptions exponent_law_at_zero.
 (* Cat(m) against 4^m, the bound [s^0] R_d is read against *)
-Compute (map (fun m => (card132 m, Nat.pow 4 m)) (seq 0 6)).
+Compute (map (fun m => (card132f m, Nat.pow 4 m)) (seq 0 6)).
 
 (* ---- d_A decreasing under inclusion of the shared cell's ascent set ---- *)
 Print Assumptions locell_132_pos.
@@ -1119,5 +1123,76 @@ Print Assumptions pabs_nil.
 Print Assumptions slev_eq.
 Print Assumptions transfer_card.
 (* the transfer against card, and the compression it buys *)
-Compute (length (slev 5 5), card 5).
+Compute (length (slev 5 5), cardf 5).
 Compute (length (slev 6 6), tcard 6 6, length (tlev 6 6)).
+
+(* ---- the automation layer: rank transport ---- *)
+Print Assumptions rank_val.
+Print Assumptions rank_bound.
+Print Assumptions rank_ord.
+Print Assumptions filter_132.
+Print Assumptions filter_213.
+Print Assumptions filter_1324.
+
+(* ---- the fast layer, completed ---- *)
+Print Assumptions cardf_eq.
+Print Assumptions card132f_eq.
+Print Assumptions Ddiagf_eq.
+Print Assumptions Nsigf_eq.
+Print Assumptions dAf_eq.
+Print Assumptions gluedf_eq.
+Print Assumptions pqd_pairsf_eq.
+Print Assumptions diag_pairsf_eq.
+Print Assumptions invfibref_eq.
+Print Assumptions invkeysf_eq.
+Print Assumptions strata_off_eq.
+Print Assumptions dstrataf_eq.
+Print Assumptions Tstraightf_eq.
+
+(* ---- linear independence of C(2M,M) and 4^M, and the uniqueness it gives ---- *)
+Print Assumptions nat_cancel_le.
+Print Assumptions nat_pow_ge1.
+Print Assumptions pow16.
+Print Assumptions binomN_pos.
+Print Assumptions cb_ratio.
+Print Assumptions cb_upper.
+Print Assumptions cb_lower.
+Print Assumptions Qabs_zero.
+Print Assumptions Qabs_pos_of_ne.
+Print Assumptions Qsq_abs.
+Print Assumptions Qabs_rev.
+Print Assumptions Qcancel_le_r.
+Print Assumptions Qmul_le_r.
+Print Assumptions Qmul_le_l.
+Print Assumptions Zof_to_nat_ge.
+Print Assumptions Qn_above.
+Print Assumptions Qn_nonneg.
+Print Assumptions Qn_lin.
+Print Assumptions no_linear_bound.
+Print Assumptions sumabs_nonneg.
+Print Assumptions polyQ_upper.
+Print Assumptions polyQ_upper_deg.
+Print Assumptions polyQ_split_nat.
+Print Assumptions polyQ_lower.
+Print Assumptions nzlen_above.
+Print Assumptions nzlen_top.
+Print Assumptions nzlen_zero_poly.
+Print Assumptions two_term_sandwich.
+Print Assumptions two_term_indep.
+Print Assumptions polyQ_nth_eq.
+Print Assumptions diagonal_unique.
+Print Assumptions diagonal_unique_poly.
+Print Assumptions p_lead_one_any.
+Print Assumptions R_at_minus_one_one_any.
+Print Assumptions exponent_law_at_zero_one.
+Print Assumptions p_lead_two_any.
+Print Assumptions R_at_minus_one_two_any.
+Print Assumptions exponent_law_at_zero_two.
+(* C(2M,M)^2 against 16^M/(4M+1) and 16^M/(3M+1), the sandwich the
+   independence argument runs on *)
+Compute (map (fun M => ((4 * M + 1) * (binomN (2 * M) M * binomN (2 * M) M),
+                        16 ^ M,
+                        (3 * M + 1) * (binomN (2 * M) M * binomN (2 * M) M))%nat)
+             (seq 0 4)).
+(* the top nonzero index of a coefficient list *)
+Compute (nzlen (dpfib 2 P2), nzlen (dqfib 2 Q2), nzlen (dqfib 1 Q1)).
