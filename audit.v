@@ -1654,3 +1654,24 @@ Print Assumptions extend_three_free.
 Compute (map (fun M => (fold_right (fun u acc =>
                           (length (extend u M 3) + acc)%nat) 0%nat (gen132f M),
                         Ddiag 3 M)) (seq 0 4)).
+
+(* ---- the d = 4 diagonal through the state function ---- *)
+Print Assumptions Hu_ext_hi_S.
+Print Assumptions d4_hiblock.
+Print Assumptions extend_three_at.
+Print Assumptions Ddiag_four_H.
+Print Assumptions diagonal_four.
+(* D(4,M) = 23, 103, 513, 2537, 12348 *)
+Compute (map (fun M =>
+          fold_right (fun u acc =>
+            (fold_right (fun y acc' => (d4form u M y + acc')%nat) 0%nat
+                        (seq 0 (S M)) + acc)%nat) 0%nat (gen132f M))
+          (seq 0 5)).
+(* against the fitted law 24 D(4,M) = (M^3+35M^2+216M+288) C(2M,M)
+   + (6M^2+78M+264) 4^M *)
+Compute (map (fun M =>
+          ((24 * fold_right (fun u acc =>
+              (fold_right (fun y acc' => (d4form u M y + acc')%nat) 0%nat
+                          (seq 0 (S M)) + acc)%nat) 0%nat (gen132f M))%nat,
+           ((M * M * M + 35 * M * M + 216 * M + 288) * binomN (2 * M) M
+            + (6 * M * M + 78 * M + 264) * 4 ^ M)%nat)) (seq 0 3)).

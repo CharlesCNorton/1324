@@ -21188,3 +21188,281 @@ Proof.
     reflexivity. }
   rewrite E. reflexivity.
 Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The d = 4 diagonal through the state function. *)
+
+
+Definition d4form (u : list nat) (M y : nat) : nat :=
+  ((8 + 2 * Hu u M y
+    + fold_right (fun s acc => (3 + Nat.min y (Hu u M s) + acc)%nat) 0%nat
+                 (seq 1 y)
+    + fold_right (fun q acc => (4 + Hu u M q + acc)%nat) 0%nat
+                 (seq y (S (Hu u M y - y))))
+   + fold_right (fun z acc =>
+       (3 + Nat.min y (Hu u M z)
+        + fold_right (fun t acc' => (2 + Nat.min z (Hu u M t) + acc')%nat)
+                     0%nat (seq 1 z)
+        + fold_right (fun s acc' => (3 + Nat.min y (Hu u M s) + acc')%nat)
+                     0%nat (seq z (S (Nat.min y (Hu u M z) - z)))
+        + acc)%nat) 0%nat (seq 1 y)
+   + fold_right (fun w acc =>
+       (4 + Hu u M w
+        + fold_right (fun t acc' => (2 + Nat.min y (Hu u M t) + acc')%nat)
+                     0%nat (seq 1 y)
+        + fold_right (fun r acc' => (3 + Nat.min w (Hu u M r) + acc')%nat)
+                     0%nat (seq y (S (w - y)))
+        + fold_right (fun q acc' => (4 + Hu u M q + acc')%nat) 0%nat
+                     (seq w (S (Hu u M w - w)))
+        + acc)%nat) 0%nat (seq y (S (Hu u M y - y))))%nat.
+
+Definition Gz (u : list nat) (M y z : nat) : nat :=
+  (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z)
+   + fold_right (fun t acc => (2 + Nat.min z (Hu (ext u y) (S M) t) + acc)%nat)
+                0%nat (seq 1 z)
+   + fold_right (fun s acc =>
+       (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s) + acc)%nat) 0%nat
+       (seq z (S (Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z) - z))))%nat.
+
+Lemma Hu_ext_hi_S : forall u M y r,
+  length u = M -> y <= M -> y <= r -> r <= M ->
+  Hu (ext u y) (S M) (S r) = S (Hu u M r).
+Proof.
+  intros u M y r HL HyM Hyr HrM.
+  rewrite (Hu_ext_hi_M u M y (S r) HL HyM ltac:(lia) ltac:(lia)).
+  replace (S r - 1)%nat with r by lia.
+  assert (Hgr : r <= Hu u M r) by (apply Hu_ge; lia).
+  unfold bump. destruct (Nat.leb_spec y (Hu u M r)); lia.
+Qed.
+
+Lemma seq_split_lo : forall y w, y <= w ->
+  seq 1 (S w) = seq 1 y ++ seq (S y) (S w - y).
+Proof.
+  intros y w H.
+  replace (S w) with (y + (S w - y))%nat at 1 by lia.
+  rewrite (seq_break y (S w - y) 1).
+  replace (1 + y)%nat with (S y) by lia. reflexivity.
+Qed.
+
+(* the sum of H over a block above the insertion point *)
+Lemma d4_hiblock : forall M u y a b,
+  length u = M -> is_perm u M -> y <= M -> y <= a -> b <= M ->
+  b <= Hu u M y -> a <= S b ->
+  fold_right (fun s acc =>
+    (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s) + acc)%nat) 0%nat
+    (seq (S a) (S b - a))
+  = fold_right (fun q acc => (4 + Hu u M q + acc)%nat) 0%nat (seq a (S b - a)).
+Proof.
+  intros M u y a b HL Hp HyM Hya HbM Hbh Hab.
+  rewrite <- (seq_shift (S b - a) a).
+  rewrite (nfold_map_gen nat nat
+    (fun s => (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s))%nat) S
+    (seq a (S b - a))).
+  cbn beta.
+  apply nfold_ext_in. intros q Hq. apply in_seq in Hq.
+  assert (HqM : q <= M) by lia.
+  assert (Hyq : y <= q) by lia.
+  rewrite (Hu_ext_hi_S u M y q HL HyM Hyq HqM).
+  assert (Hlam : Hu u M q <= Hu u M y) by (apply (Hu_laminar u M y q); lia).
+  lia.
+Qed.
+
+Theorem extend_three_at : forall M u y, In u (gen132 M) -> y <= M ->
+  length (extend (ext u y) (S M) 3) = d4form u M y.
+Proof.
+  intros M u y Hin HyM.
+  assert (Hp : is_perm u M) by (apply gen132_perm; exact Hin).
+  assert (H132 : ~ contains_132 u) by (exact (gen132_av M u Hin)).
+  assert (Hlu : length u = M) by (apply (perm_len u M); exact Hp).
+  assert (Hc := Hu_le_cap u M y).
+  assert (Hg : y <= Hu u M y) by (apply Hu_ge; exact HyM).
+  assert (Hpe : is_perm (ext u y) (S M)) by (apply ext_perm; assumption).
+  assert (Hae : ~ contains_1324 (ext u y))
+    by (apply ext_all_legal_when_132_free; exact H132).
+  rewrite (extend_three_state (ext u y) (S M) Hpe Hae).
+  rewrite (Mu_ext_free u M y Hp H132 HyM).
+  change (fold_right (fun z acc =>
+    (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z)
+     + fold_right (fun t acc' =>
+         (2 + Nat.min z (Hu (ext u y) (S M) t) + acc')%nat) 0%nat (seq 1 z)
+     + fold_right (fun s acc' =>
+         (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s) + acc')%nat) 0%nat
+         (seq z (S (Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z) - z)))
+     + acc)%nat) 0%nat (seq 0 (S (S (Hu u M y)))))
+  with (fold_right (fun z acc => (Gz u M y z + acc)%nat) 0%nat
+          (seq 0 (S (S (Hu u M y))))).
+  rewrite (seq_split_d3 y (Hu u M y) Hg).
+  rewrite !(nfold_app nat (fun z => Gz u M y z)).
+  replace (seq 0 1) with (0%nat :: @nil nat) by reflexivity.
+  rewrite (nfold_single nat (fun z => Gz u M y z) 0).
+  (* the block at the insertion point *)
+  assert (P1 : Gz u M y 0
+    = (8 + 2 * Hu u M y
+       + fold_right (fun s acc => (3 + Nat.min y (Hu u M s) + acc)%nat) 0%nat
+                    (seq 1 y)
+       + fold_right (fun q acc => (4 + Hu u M q + acc)%nat) 0%nat
+                    (seq y (S (Hu u M y - y))))%nat).
+  { unfold Gz.
+    rewrite (Hu_ext_zero_M u M y Hlu).
+    rewrite (Nat.min_l (S (Hu u M y)) (S M) ltac:(lia)).
+    replace (seq 1 0) with (@nil nat) by reflexivity.
+    cbn [fold_right].
+    replace (S (Hu u M y) - 0)%nat with (S (Hu u M y)) by lia.
+    rewrite (seq_split_d3 y (Hu u M y) Hg).
+    rewrite !(nfold_app nat (fun s =>
+      (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s))%nat)).
+    replace (seq 0 1) with (0%nat :: @nil nat) by reflexivity.
+    rewrite (nfold_single nat (fun s =>
+      (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s))%nat) 0).
+    cbn beta.
+    rewrite (Hu_ext_zero_M u M y Hlu).
+    rewrite (Nat.min_l (S (Hu u M y)) (S M) ltac:(lia)).
+    assert (Q2 : fold_right (fun s acc =>
+        (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s) + acc)%nat) 0%nat
+        (seq 1 y)
+      = fold_right (fun s acc => (3 + Nat.min y (Hu u M s) + acc)%nat) 0%nat
+                   (seq 1 y)).
+    { apply nfold_ext_in. intros s Hs. apply in_seq in Hs.
+      rewrite (Hu_ext_lo_M u M y s Hlu Hp HyM ltac:(lia) ltac:(lia)).
+      assert (K : Nat.min y (Hu u M s) <= y) by lia. lia. }
+    assert (Q3 := d4_hiblock M u y y (Hu u M y) Hlu Hp HyM
+                    ltac:(lia) Hc ltac:(lia) ltac:(lia)).
+    replace (S (Hu u M y) - y)%nat with (S (Hu u M y - y)) in Q3 by lia.
+    replace (S (Hu u M y) - y)%nat with (S (Hu u M y - y)) by lia.
+    rewrite Q2, Q3. lia. }
+  (* the block below the insertion point *)
+  assert (P2 : fold_right (fun z acc => (Gz u M y z + acc)%nat) 0%nat (seq 1 y)
+    = fold_right (fun z acc =>
+        (3 + Nat.min y (Hu u M z)
+         + fold_right (fun t acc' => (2 + Nat.min z (Hu u M t) + acc')%nat)
+                      0%nat (seq 1 z)
+         + fold_right (fun s acc' => (3 + Nat.min y (Hu u M s) + acc')%nat)
+                      0%nat (seq z (S (Nat.min y (Hu u M z) - z)))
+         + acc)%nat) 0%nat (seq 1 y)).
+  { apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    assert (Hz1 : 1 <= z) by lia.
+    assert (Hzy : z <= y) by lia.
+    unfold Gz.
+    rewrite (Hu_ext_lo_M u M y z Hlu Hp HyM Hz1 Hzy).
+    assert (K : Nat.min y (Hu u M z) <= y) by lia.
+    rewrite (Nat.min_r (S (Hu u M y)) (Nat.min y (Hu u M z)) ltac:(lia)).
+    assert (T : fold_right (fun t acc =>
+        (2 + Nat.min z (Hu (ext u y) (S M) t) + acc)%nat) 0%nat (seq 1 z)
+      = fold_right (fun t acc => (2 + Nat.min z (Hu u M t) + acc)%nat) 0%nat
+                   (seq 1 z)).
+    { apply nfold_ext_in. intros t Ht. apply in_seq in Ht.
+      rewrite (Hu_ext_lo_M u M y t Hlu Hp HyM ltac:(lia) ltac:(lia)). lia. }
+    assert (S2 : fold_right (fun s acc =>
+        (3 + Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) s) + acc)%nat) 0%nat
+        (seq z (S (Nat.min y (Hu u M z) - z)))
+      = fold_right (fun s acc => (3 + Nat.min y (Hu u M s) + acc)%nat) 0%nat
+                   (seq z (S (Nat.min y (Hu u M z) - z)))).
+    { apply nfold_ext_in. intros s Hs. apply in_seq in Hs.
+      rewrite (Hu_ext_lo_M u M y s Hlu Hp HyM ltac:(lia) ltac:(lia)).
+      assert (K2 : Nat.min y (Hu u M s) <= y) by lia. lia. }
+    rewrite T, S2. reflexivity. }
+  (* the block above the insertion point *)
+  assert (P3 : fold_right (fun z acc => (Gz u M y z + acc)%nat) 0%nat
+      (seq (S y) (S (Hu u M y) - y))
+    = fold_right (fun w acc =>
+        (4 + Hu u M w
+         + fold_right (fun t acc' => (2 + Nat.min y (Hu u M t) + acc')%nat)
+                      0%nat (seq 1 y)
+         + fold_right (fun r acc' => (3 + Nat.min w (Hu u M r) + acc')%nat)
+                      0%nat (seq y (S (w - y)))
+         + fold_right (fun q acc' => (4 + Hu u M q + acc')%nat) 0%nat
+                      (seq w (S (Hu u M w - w)))
+         + acc)%nat) 0%nat (seq y (S (Hu u M y - y)))).
+  { replace (S (Hu u M y) - y)%nat with (S (Hu u M y - y)) by lia.
+    rewrite <- (seq_shift (S (Hu u M y - y)) y).
+    rewrite (nfold_map_gen nat nat (fun z => Gz u M y z) S
+               (seq y (S (Hu u M y - y)))).
+    cbn beta.
+    apply nfold_ext_in. intros w Hw. apply in_seq in Hw.
+    assert (Hyw : y <= w) by lia.
+    assert (HwH : w <= Hu u M y) by lia.
+    assert (HwM : w <= M) by lia.
+    unfold Gz.
+    rewrite (Hu_ext_hi_S u M y w Hlu HyM Hyw HwM).
+    assert (Hlamw : Hu u M w <= Hu u M y) by (apply (Hu_laminar u M y w); lia).
+    rewrite (Nat.min_r (S (Hu u M y)) (S (Hu u M w)) ltac:(lia)).
+    assert (T : fold_right (fun t acc =>
+        (2 + Nat.min (S w) (Hu (ext u y) (S M) t) + acc)%nat) 0%nat
+        (seq 1 (S w))
+      = (fold_right (fun t acc => (2 + Nat.min y (Hu u M t) + acc)%nat) 0%nat
+                    (seq 1 y)
+         + fold_right (fun r acc => (3 + Nat.min w (Hu u M r) + acc)%nat) 0%nat
+                      (seq y (S (w - y))))%nat).
+    { rewrite (seq_split_lo y w Hyw).
+      rewrite (nfold_app nat (fun t =>
+        (2 + Nat.min (S w) (Hu (ext u y) (S M) t))%nat)).
+      f_equal.
+      - apply nfold_ext_in. intros t Ht. apply in_seq in Ht.
+        rewrite (Hu_ext_lo_M u M y t Hlu Hp HyM ltac:(lia) ltac:(lia)).
+        assert (K : Nat.min y (Hu u M t) <= y) by lia. lia.
+      - replace (S w - y)%nat with (S (w - y)) by lia.
+        rewrite <- (seq_shift (S (w - y)) y).
+        rewrite (nfold_map_gen nat nat
+          (fun t => (2 + Nat.min (S w) (Hu (ext u y) (S M) t))%nat) S
+          (seq y (S (w - y)))).
+        cbn beta.
+        apply nfold_ext_in. intros r Hr. apply in_seq in Hr.
+        rewrite (Hu_ext_hi_S u M y r Hlu HyM ltac:(lia) ltac:(lia)). lia. }
+    rewrite T.
+    assert (Hgw : w <= Hu u M w) by (apply Hu_ge; lia).
+    assert (Q := d4_hiblock M u y w (Hu u M w) Hlu Hp HyM Hyw
+                   (Hu_le_cap u M w) Hlamw ltac:(lia)).
+    replace (S (Hu u M w) - w)%nat with (S (Hu u M w - w)) in Q by lia.
+    replace (S (S (Hu u M w) - S w)) with (S (Hu u M w - w)) by lia.
+    rewrite Q. lia. }
+  rewrite P1, P2, P3. unfold d4form. lia.
+Qed.
+
+Theorem Ddiag_four_H : forall M,
+  Ddiag 4 M
+  = fold_right (fun u acc =>
+      (fold_right (fun y acc' => (d4form u M y + acc')%nat) 0%nat
+                  (seq 0 (S M)) + acc)%nat) 0%nat (gen132 M).
+Proof.
+  intro M. change 4 with (S 3). rewrite (Ddiag_front 3 M).
+  apply nfold_ext_in. intros u Hin.
+  apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+  apply extend_three_at; [exact Hin | lia].
+Qed.
+
+
+(* The d = 4 two-term law, in the cleared form the state sum has to reach.
+   Fitted and checked against the enumerator at every size it reaches:
+   p_4 of degree 3 with leading coefficient 1/4! and q_4 of degree 2 with
+   leading coefficient C(4,2)/4!. *)
+Definition DDIAG_FOUR_CLOSED : Prop :=
+  forall M, (24 * Ddiag 4 M
+             = (M * M * M + 35 * M * M + 216 * M + 288) * binomN (2 * M) M
+               + (6 * M * M + 78 * M + 264) * 4 ^ M)%nat.
+
+Definition diagonal_four (H : DDIAG_FOUR_CLOSED) : Diagonal 4.
+Proof.
+  refine (mkDiagonal 4
+            (Qmake 288 24 :: Qmake 216 24 :: Qmake 35 24 :: Qmake 1 24 :: nil)
+            (Qmake 264 24 :: Qmake 78 24 :: Qmake 6 24 :: nil)
+            eq_refl eq_refl _).
+  intro M.
+  assert (K := H M).
+  assert (E : Qn (24 * Ddiag 4 M)%nat == Qmult 24 (Qn (Ddiag 4 M))).
+  { rewrite Qn_mul.
+    assert (E24 : Qn 24 == 24) by (unfold Qn, Qeq; simpl; lia).
+    rewrite E24. reflexivity. }
+  assert (E6 : Qn 6 == 6) by (unfold Qn, Qeq; simpl; lia).
+  assert (E35 : Qn 35 == 35) by (unfold Qn, Qeq; simpl; lia).
+  assert (E78 : Qn 78 == 78) by (unfold Qn, Qeq; simpl; lia).
+  assert (E216 : Qn 216 == 216) by (unfold Qn, Qeq; simpl; lia).
+  assert (E264 : Qn 264 == 264) by (unfold Qn, Qeq; simpl; lia).
+  assert (E288 : Qn 288 == 288) by (unfold Qn, Qeq; simpl; lia).
+  cbn [polyQ dp dq].
+  setoid_replace (Qn (Ddiag 4 M))
+    with (Qdiv (Qmult 24 (Qn (Ddiag 4 M))) 24) by field.
+  rewrite <- E, K.
+  rewrite ?Qn_add, ?Qn_mul, ?Qn_add, ?Qn_mul, ?Qn_add, ?Qn_mul.
+  rewrite E6, E35, E78, E216, E264, E288.
+  field.
+Defined.
