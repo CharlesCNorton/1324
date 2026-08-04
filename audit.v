@@ -1520,3 +1520,60 @@ Compute (let a := (1 :: 0 :: nil) in let b := (0 :: 2 :: 1 :: nil) in
                 + (length a + S (length b)))
            + length b * Lsum a (length a) + Bwp a (length a)
            + (length a + S (length b)))%nat)).
+
+(* ---- the central binomial convolution and the weighted Catalan sums ---- *)
+Print Assumptions cbi_ratio.
+Print Assumptions cb_card.
+Print Assumptions bsum_rev.
+Print Assumptions pconv1_sym.
+Print Assumptions pconv1_succ.
+Print Assumptions pconv_pow.
+Print Assumptions wsum_prodS.
+Print Assumptions wsum_id_val.
+Print Assumptions wsum_kmk_val.
+Print Assumptions wsum_sq_val.
+Print Assumptions wsum_shift1.
+Print Assumptions wsum_shift2.
+Print Assumptions Bconv_rec.
+Print Assumptions Bconv_val.
+Print Assumptions Aconv_shift1.
+Print Assumptions Aconv_rev_w.
+Print Assumptions conv_rev.
+Print Assumptions conv_cat.
+Print Assumptions conv_wsum.
+Print Assumptions conv_aconv.
+Print Assumptions conv_bconv.
+Print Assumptions conv_rbconv.
+Print Assumptions conv_a1.
+Print Assumptions conv_shift1.
+Print Assumptions conv_shift2.
+(* the central binomials convolve to the powers of four *)
+Compute (map (fun m => (pconv m, 4 ^ m)) (seq 0 7)).
+(* the weighted 4-against-Catalan convolution *)
+Compute (map (fun m => ((2 * Bconv m + 4 * (2 * m + 1) * binomN (2 * m) m)%nat,
+                        ((m + 1) * 4 ^ (S m))%nat)) (seq 0 6)).
+
+(* ---- the subtree statistic in closed form ---- *)
+Print Assumptions Bw_split.
+Print Assumptions Btot_split.
+Print Assumptions Atot_split.
+Print Assumptions Ptot_scpair.
+Print Assumptions Ptot_closed.
+Print Assumptions Awptot_closed.
+Print Assumptions Bwp_midmax.
+Print Assumptions Bwptot_expand.
+Print Assumptions Bwptot_conv.
+Print Assumptions conv_SA.
+Print Assumptions conv_SB.
+Print Assumptions conv_SC1.
+Print Assumptions conv_SC2.
+Print Assumptions conv_SD.
+Print Assumptions conv_SE.
+Print Assumptions conv_SF.
+Print Assumptions Bwptot_step.
+Print Assumptions Bwptot_closed.
+Print Assumptions Btot_closed.
+(* the level totals and the closed form they satisfy *)
+Compute (map (fun m => (Bwptot m, Awptot m, Ptot m)) (seq 0 6)).
+Compute (map (fun M => ((4 * Btot M)%nat,
+                        (4 * M * binomN (2 * M) M + M * 4 ^ M)%nat)) (seq 0 6)).
