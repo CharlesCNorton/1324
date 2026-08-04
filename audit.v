@@ -1478,3 +1478,13 @@ Compute (map (fun m => (scsq m,
 Compute (map (fun m => (scpair m,
                         (2 * card132f (S (S m)) - 4 * card132f (S m))%nat))
              (seq 0 6)).
+Print Assumptions split_at_point.
+Print Assumptions cntge_cons.
+Print Assumptions pairge_cons.
+Print Assumptions pairge_val.
+Print Assumptions safelist_nodup.
+Print Assumptions safelist_len.
+Print Assumptions safelist_pairs.
+(* the safe values of each 132-avoider of length 4, and their ordered pairs *)
+Compute (map (fun b => (safelist b 4, pairge (safelist b 4), safecount b 4))
+             (gen132f 4)).

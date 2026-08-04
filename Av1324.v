@@ -18447,6 +18447,83 @@ Proof.
   unfold scsq. lia.
 Qed.
 
+(* Ordered pairs of safe values, which is what the subtree statistic's
+   max-split recursion counts at the split point. *)
+
+Definition cntge (L : list nat) (y : nat) : nat :=
+  length (filter (fun z => Nat.leb y z) L).
+
+Definition pairge (L : list nat) : nat :=
+  fold_right (fun y acc => (cntge L y + acc)%nat) 0%nat L.
+
+Lemma split_at_point : forall x L, ~ In x L ->
+  (length (filter (fun z => Nat.leb x z) L)
+   + length (filter (fun z => Nat.leb z x) L) = length L)%nat.
+Proof.
+  intros x. induction L as [|a L IH]; intro H; [reflexivity|].
+  cbn [filter length].
+  assert (Hne : a <> x) by (intro E; apply H; left; exact E).
+  assert (HL : ~ In x L) by (intro C; apply H; right; exact C).
+  assert (K := IH HL).
+  destruct (Nat.leb_spec x a); destruct (Nat.leb_spec a x);
+    cbn [length]; lia.
+Qed.
+
+Lemma cntge_cons : forall x L y,
+  cntge (x :: L) y = ((if Nat.leb y x then 1 else 0) + cntge L y)%nat.
+Proof.
+  intros x L y. unfold cntge. cbn [filter].
+  destruct (Nat.leb y x); cbn [length]; lia.
+Qed.
+
+Lemma pairge_cons : forall x L, ~ In x L ->
+  pairge (x :: L) = (S (length L) + pairge L)%nat.
+Proof.
+  intros x L Hnx.
+  assert (Hsp := split_at_point x L Hnx).
+  unfold pairge at 1. cbn [fold_right].
+  rewrite (cntge_cons x L x), Nat.leb_refl.
+  transitivity (1 + cntge L x
+                + fold_right (fun y acc =>
+                    ((if Nat.leb y x then 1 else 0) + cntge L y + acc)%nat)
+                    0%nat L)%nat.
+  { f_equal. apply nfold_ext_in. intros y _. apply cntge_cons. }
+  rewrite (fold_add_split nat (fun y => if Nat.leb y x then 1 else 0)
+             (fun y => cntge L y) L).
+  cbn beta.
+  rewrite <- (length_filter_fold nat (fun y => Nat.leb y x) L).
+  unfold pairge. unfold cntge in Hsp |- *. lia.
+Qed.
+
+Lemma pairge_val : forall L, NoDup L ->
+  (2 * pairge L = length L * S (length L))%nat.
+Proof.
+  induction L as [|x L IH]; intro Hnd; [reflexivity|].
+  inversion Hnd as [|z r Hnx Hnd' Heq]; subst.
+  rewrite (pairge_cons x L Hnx).
+  assert (IHL := IH Hnd').
+  cbn [length]. nia.
+Qed.
+
+Definition safelist (b : list nat) (n : nat) : list nat :=
+  filter (safeb b) (seq 1 n).
+
+Lemma safelist_nodup : forall b n, NoDup (safelist b n).
+Proof. intros b n. unfold safelist. apply NoDup_filter. apply seq_NoDup. Qed.
+
+Lemma safelist_len : forall b n,
+  S (length (safelist b n)) = safecount b n.
+Proof. intros b n. unfold safelist. symmetry. apply safecount_head. Qed.
+
+Corollary safelist_pairs : forall b n,
+  (2 * pairge (safelist b n) = (safecount b n - 1) * safecount b n)%nat.
+Proof.
+  intros b n. rewrite (pairge_val _ (safelist_nodup b n)).
+  rewrite <- (safelist_len b n).
+  replace (S (length (safelist b n)) - 1) with (length (safelist b n)) by lia.
+  reflexivity.
+Qed.
+
 Corollary scpair_closed : forall m,
   (scpair m + 4 * card132 (S m) = 2 * card132 (S (S m)))%nat.
 Proof.
