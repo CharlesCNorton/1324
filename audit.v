@@ -1766,3 +1766,7 @@ Compute (map (fun M => ((sccube M + 18 * card132 (S (S M)))%nat,
 Print Assumptions safe_subtree_unsafe.
 Print Assumptions BBin_lo_unsafe.
 Print Assumptions BBin_hi.
+
+(* ---- the safe branch of the second-order subtree sum ---- *)
+Print Assumptions BBin_lo_safe.
+Print Assumptions BBin_root.
