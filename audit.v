@@ -1690,3 +1690,11 @@ Print Assumptions Lsum_succ.
 Print Assumptions d4stat_B.
 Print Assumptions d4stat_C.
 Print Assumptions d4stat_sum.
+
+(* ---- the d = 4 level sum ---- *)
+Print Assumptions tri3_val.
+Print Assumptions d4stat_sum'.
+Print Assumptions Ddiag_four_stats.
+Print Assumptions GGin_split.
+Print Assumptions GGw_split.
+Print Assumptions GGtot_split.

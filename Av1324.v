@@ -21739,3 +21739,165 @@ Proof.
     unfold Aw, Lsum, Cw, Bw, CCw, DDw, EEw, BBw, GGw, PCw, Yw, Tw, tri.
     lia.
 Qed.
+
+(* The d = 4 level sum. *)
+
+
+Definition tri3 (M : nat) : nat :=
+  fold_right (fun y acc => (tri y + acc)%nat) 0%nat (seq 0 (S M)).
+
+Lemma tri3_val : forall M, (6 * tri3 M = M * (M + 1) * (M + 2))%nat.
+Proof.
+  induction M as [|m IH]; [reflexivity|].
+  assert (E : tri3 (S m) = (tri3 m + tri (S m))%nat).
+  { unfold tri3 at 1. rewrite (seq_snoc (S m) 0).
+    rewrite (nfold_app nat (fun y => tri y)).
+    rewrite (nfold_single nat (fun y => tri y) (0 + S m)).
+    cbn beta. replace (0 + S m)%nat with (S m) by lia. reflexivity. }
+  rewrite E. assert (Ht := tri_val (S m)). nia.
+Qed.
+
+Definition CCtot (M : nat) : nat :=
+  fold_right (fun u acc => (CCw u M + acc)%nat) 0%nat (gen132 M).
+Definition DDtot (M : nat) : nat :=
+  fold_right (fun u acc => (DDw u M + acc)%nat) 0%nat (gen132 M).
+Definition EEtot (M : nat) : nat :=
+  fold_right (fun u acc => (EEw u M + acc)%nat) 0%nat (gen132 M).
+Definition BBtot (M : nat) : nat :=
+  fold_right (fun u acc => (BBw u M + acc)%nat) 0%nat (gen132 M).
+Definition GGtot (M : nat) : nat :=
+  fold_right (fun u acc => (GGw u M + acc)%nat) 0%nat (gen132 M).
+Definition PCtot (M : nat) : nat :=
+  fold_right (fun u acc => (PCw u M + acc)%nat) 0%nat (gen132 M).
+Definition Ytot (M : nat) : nat :=
+  fold_right (fun u acc => (Yw u M + acc)%nat) 0%nat (gen132 M).
+Definition Ttot (M : nat) : nat :=
+  fold_right (fun u acc => (Tw u M + acc)%nat) 0%nat (gen132 M).
+
+Lemma d4stat_sum' : forall M u,
+  fold_right (fun y acc => (d4stat u M y + acc)%nat) 0%nat (seq 0 (S M))
+  = (((23 * S M + 9 * tri M) + 2 * Aw u M + 15 * Lsum u M + 5 * Cw u M
+      + 2 * Bw u M)
+     + (CCw u M + DDw u M + 2 * Yw u M + PCw u M)
+     + (3 * Tw u M + EEw u M + 4 * GGw u M + BBw u M))%nat.
+Proof. intros M u. assert (K := d4stat_sum M u). lia. Qed.
+
+Theorem Ddiag_four_stats : forall M,
+  (Ddiag 4 M + card132 M * tri3 M
+   = ((23 * S M + 9 * tri M) * card132 M + 2 * Atot M + 15 * Ltot M
+      + 5 * Ctot M + 2 * Btot M)
+     + (CCtot M + DDtot M + 2 * Ytot M + PCtot M)
+     + (3 * Ttot M + EEtot M + 4 * GGtot M + BBtot M))%nat.
+Proof.
+  intro M.
+  assert (Ec : (card132 M * tri3 M)%nat
+    = fold_right (fun (_ : list nat) (acc : nat) => (tri3 M + acc)%nat) 0%nat
+                 (gen132 M)).
+  { rewrite (nfold_const (list nat) (tri3 M) (gen132 M)).
+    unfold card132. ring. }
+  assert (E1 : (Ddiag 4 M + card132 M * tri3 M)%nat
+    = fold_right (fun u acc =>
+        (fold_right (fun y acc' => (d4stat u M y + acc')%nat) 0%nat
+                    (seq 0 (S M)) + acc)%nat) 0%nat (gen132 M)).
+  { rewrite (Ddiag_four_H M), Ec.
+    rewrite <- (fold_add_split (list nat)
+      (fun u => fold_right (fun y acc' => (d4form u M y + acc')%nat) 0%nat
+                           (seq 0 (S M)))
+      (fun _ : list nat => tri3 M) (gen132 M)).
+    apply nfold_ext_in. intros u Hin.
+    unfold tri3.
+    rewrite <- (fold_add_split nat (fun y => d4form u M y) (fun y => tri y)
+                  (seq 0 (S M))).
+    apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+    apply (d4form_stats M u y Hin ltac:(lia)). }
+  rewrite E1.
+  transitivity (fold_right (fun u acc =>
+      (((23 * S M + 9 * tri M) + 2 * Aw u M + 15 * Lsum u M + 5 * Cw u M
+        + 2 * Bw u M)
+       + (CCw u M + DDw u M + 2 * Yw u M + PCw u M)
+       + (3 * Tw u M + EEw u M + 4 * GGw u M + BBw u M)
+       + acc)%nat) 0%nat (gen132 M)).
+  - apply nfold_ext_in. intros u _. apply d4stat_sum'.
+  - rewrite (nfold_three (list nat)
+      (fun u => ((23 * S M + 9 * tri M) + 2 * Aw u M + 15 * Lsum u M
+                 + 5 * Cw u M + 2 * Bw u M)%nat)
+      (fun u => (CCw u M + DDw u M + 2 * Yw u M + PCw u M)%nat)
+      (fun u => (3 * Tw u M + EEw u M + 4 * GGw u M + BBw u M)%nat)
+      (gen132 M)).
+    cbn beta.
+    rewrite (nfold_five (list nat)
+      (fun _ : list nat => (23 * S M + 9 * tri M)%nat)
+      (fun u => (2 * Aw u M)%nat) (fun u => (15 * Lsum u M)%nat)
+      (fun u => (5 * Cw u M)%nat) (fun u => (2 * Bw u M)%nat) (gen132 M)).
+    rewrite (nfold_four (list nat) (fun u => CCw u M) (fun u => DDw u M)
+      (fun u => (2 * Yw u M)%nat) (fun u => PCw u M) (gen132 M)).
+    rewrite (nfold_four (list nat) (fun u => (3 * Tw u M)%nat)
+      (fun u => EEw u M) (fun u => (4 * GGw u M)%nat) (fun u => BBw u M)
+      (gen132 M)).
+    cbn beta.
+    rewrite (nfold_const (list nat) (23 * S M + 9 * tri M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 2 (fun u => Aw u M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 15 (fun u => Lsum u M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 5 (fun u => Cw u M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 2 (fun u => Bw u M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 2 (fun u => Yw u M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 3 (fun u => Tw u M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 4 (fun u => GGw u M) (gen132 M)).
+    cbn beta.
+    unfold Atot, Ltot, Ctot, Btot, CCtot, DDtot, EEtot, BBtot, GGtot,
+           PCtot, Ytot, Ttot, card132.
+    lia.
+Qed.
+
+(* the redundancy among the new statistics: the subtree gap sum is the subtree
+   H sum less the positions it runs over *)
+Lemma GGin_split : forall u M y, y <= M ->
+  (GGin u M y + (y * S (hgap u M y) + tri (hgap u M y)) = Bin u M y)%nat.
+Proof.
+  intros u M y HyM.
+  assert (Hgy : y <= Hu u M y) by (apply Hu_ge; exact HyM).
+  assert (Hcy := Hu_le_cap u M y).
+  assert (E : fold_right (fun w acc => (hgap u M w + w + acc)%nat) 0%nat
+                (seq y (S (Hu u M y - y)))
+            = Bin u M y).
+  { unfold Bin. apply nfold_ext_in. intros w Hw. apply in_seq in Hw.
+    assert (HwM : w <= M) by lia.
+    assert (Hg : w <= Hu u M w) by (apply Hu_ge; exact HwM).
+    unfold hgap. lia. }
+  rewrite <- E.
+  rewrite (fold_add_split nat (fun w => hgap u M w) (fun w => w)
+             (seq y (S (Hu u M y - y)))).
+  cbn beta.
+  assert (F : fold_right (fun w acc => (w + acc)%nat) 0%nat
+                (seq y (S (Hu u M y - y)))
+            = (y * S (Hu u M y - y) + tri (Hu u M y - y))%nat).
+  { transitivity (fold_right (fun w acc => (y + (w - y) + acc)%nat) 0%nat
+                    (seq y (S (Hu u M y - y)))).
+    - apply nfold_ext_in. intros w Hw. apply in_seq in Hw. lia.
+    - rewrite (fold_add_split nat (fun _ : nat => y) (fun w => (w - y)%nat)
+                 (seq y (S (Hu u M y - y)))).
+      cbn beta.
+      rewrite (nfold_const nat y (seq y (S (Hu u M y - y)))), length_seq.
+      rewrite (seq_gap_tri y (Hu u M y - y)). lia. }
+  rewrite F. unfold GGin, hgap. lia.
+Qed.
+
+Lemma GGw_split : forall u M,
+  (GGw u M + Yw u M + Tw u M = Bw u M)%nat.
+Proof.
+  intros u M. unfold GGw, Yw, Tw, Bw.
+  rewrite <- (nfold_three nat (fun y => GGin u M y)
+                (fun y => (y * S (hgap u M y))%nat)
+                (fun y => tri (hgap u M y)) (seq 0 (S M))).
+  apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+  assert (K := GGin_split u M y ltac:(lia)). lia.
+Qed.
+
+Lemma GGtot_split : forall M, (GGtot M + Ytot M + Ttot M = Btot M)%nat.
+Proof.
+  intro M. unfold GGtot, Ytot, Ttot, Btot.
+  rewrite <- (nfold_three (list nat) (fun u => GGw u M) (fun u => Yw u M)
+                (fun u => Tw u M) (gen132 M)).
+  apply nfold_ext_in. intros u _. apply GGw_split.
+Qed.
+
