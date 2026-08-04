@@ -24546,3 +24546,193 @@ Proof.
   assert (Y := bb_YL m).
   nia.
 Qed.
+
+(* The second-order level sum in closed form. *)
+
+
+Lemma bb_R2 : forall m,
+  ((m + 3) * card132 (S (S m)) = 2 * (2 * m + 3) * card132 (S m))%nat.
+Proof.
+  intro m. assert (R := cratio (S m)).
+  replace (S (S (S m))) with (m + 3) in R by lia.
+  replace (2 * S m + 1) with (2 * m + 3) in R by lia.
+  exact R.
+Qed.
+
+Lemma bb_R3 : forall m,
+  ((m + 4) * card132 (S (S (S m)))
+   = 2 * (2 * m + 5) * card132 (S (S m)))%nat.
+Proof.
+  intro m. assert (R := cratio (S (S m))).
+  replace (S (S (S (S m)))) with (m + 4) in R by lia.
+  replace (2 * S (S m) + 1) with (2 * m + 5) in R by lia.
+  exact R.
+Qed.
+
+Lemma bb_R23 : forall m,
+  ((m + 3) * (m + 4) * card132 (S (S (S m)))
+   = 4 * (2 * m + 3) * (2 * m + 5) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := f_equal (Nat.mul (m + 3)) (bb_R3 m)).
+  assert (B := f_equal (Nat.mul (2 * (2 * m + 5))) (bb_R2 m)).
+  nia.
+Qed.
+
+Lemma bb_B4n : forall m,
+  ((m + 3) * (m + 4) * conv card132 Ptot m
+   + 6 * (m + 4) * (2 * m + 3) * card132 (S m)
+   = 4 * (2 * m + 3) * (2 * m + 5) * card132 (S m)
+     + (m + 3) * (m + 4) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := f_equal (Nat.mul ((m + 3) * (m + 4))) (conv_BB4_val m)).
+  assert (B := f_equal (Nat.mul (3 * (m + 4))) (bb_R2 m)).
+  assert (C := bb_R23 m).
+  nia.
+Qed.
+
+Lemma bb_B5n : forall m,
+  ((m + 3) * conv card132 sctot m + 2 * (m + 3) * card132 (S m)
+   = 2 * (2 * m + 3) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := f_equal (Nat.mul (m + 3)) (conv_BB5 m)).
+  assert (B := bb_R2 m).
+  nia.
+Qed.
+
+Lemma bb_B9n : forall m,
+  (2 * conv Bwptot sctot m + (m + 2) * (m + 3) * card132 (S m)
+   = m * 4 ^ m + 2 * (2 * m + 3) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := bb_B9_val m).
+  assert (B := bb_R2 m).
+  nia.
+Qed.
+
+Lemma bb_B8n : forall m,
+  (4 * conv Ltot (fun n => (n * sctot n)%nat) m + 26 * 4 ^ m
+   + (m + 2) * (m + 5) * card132 (S m)
+   = 2 * (m + 6) * (2 * m + 3) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := bb_B8_val m).
+  assert (B := f_equal (Nat.mul (m + 6)) (bb_R2 m)).
+  nia.
+Qed.
+
+Lemma bb_B2n : forall m,
+  (2 * ((m + 3) * (m + 4)) * conv (fun k => (S k * card132 k)%nat) TRIPtot m
+   + 4 * (m + 6) * (2 * m + 3) * (2 * m + 5) * card132 (S m)
+   = 10 * (m + 3) * (m + 4) * (2 * m + 3) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := f_equal (Nat.mul ((m + 3) * (m + 4))) (bb_B2_val m)).
+  assert (B := f_equal (Nat.mul (m + 6)) (bb_R23 m)).
+  assert (C := f_equal (Nat.mul (5 * (m + 3) * (m + 4))) (bb_R2 m)).
+  lia.
+Qed.
+
+Lemma bb_B3n : forall m,
+  (2 * ((m + 3) * (m + 4))
+     * conv (fun k => (k * card132 k)%nat) (fun n => (n * Ptot n)%nat) m
+   + 4 * (4 * m + 10) * (2 * m + 3) * (2 * m + 5) * card132 (S m)
+   + 2 * (m + 1) * ((m + 3) * (m + 4)) * card132 (S m)
+   = 2 * (10 * m + 18) * (m + 4) * (2 * m + 3) * card132 (S m)
+     + 16 * ((m + 3) * (m + 4)) * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := f_equal (Nat.mul ((m + 3) * (m + 4))) (bb_B3_val m)).
+  assert (B := f_equal (Nat.mul (4 * m + 10)) (bb_R23 m)).
+  assert (C := f_equal (Nat.mul ((10 * m + 18) * (m + 4))) (bb_R2 m)).
+  lia.
+Qed.
+
+Lemma bb_B7n : forall m,
+  (4 * ((m + 3) * (m + 4)) * conv Awptot Ptot m
+   + 2 * (4 * m * m + 6 * m) * (m + 4) * (2 * m + 3) * card132 (S m)
+   + 8 * ((m + 3) * (m + 4)) * 4 ^ m
+   + 4 * ((m + 3) * (m + 4)) * card132 (S m)
+   = 4 * m * (m + 3) * (2 * m + 3) * (2 * m + 5) * card132 (S m)
+     + 2 * m * m * ((m + 3) * (m + 4)) * card132 (S m)
+     + 12 * (m + 4) * (2 * m + 3) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := f_equal (Nat.mul ((m + 3) * (m + 4))) (bb_B7_val m)).
+  assert (B := f_equal (Nat.mul (m * (m + 3))) (bb_R23 m)).
+  assert (C := f_equal (Nat.mul ((4 * m * m + 6 * m) * (m + 4))) (bb_R2 m)).
+  assert (D := f_equal (Nat.mul (6 * (m + 4))) (bb_R2 m)).
+  lia.
+Qed.
+
+Lemma BBwptot_step_scaled : forall m,
+  (forall j, (j <= m)%nat -> BBCL j) ->
+  ((m + 3) * (m + 4) * (8 * BBwptot (S m))
+   = (m + 3) * (m + 4)
+     * (2 * (m * (m + 1) * (m + 2) * card132 (S m) + 4 * (m + 1) * 4 ^ m)))%nat.
+Proof.
+  intros m IH.
+  assert (HC := f_equal (Nat.mul (8 * ((m + 3) * (m + 4)))) (BBwptot_conv m)).
+  assert (H1 := f_equal (Nat.mul ((m + 3) * (m + 4))) (bb_B1_val m IH)).
+  assert (H2 := f_equal (Nat.mul 4) (bb_B2n m)).
+  assert (H3 := f_equal (Nat.mul 4) (bb_B3n m)).
+  assert (H4 := f_equal (Nat.mul (8 * (m + 1))) (bb_B4n m)).
+  assert (H5 := f_equal (Nat.mul (8 * (m + 1) * (m + 4))) (bb_B5n m)).
+  assert (H6 := f_equal (Nat.mul (8 * ((m + 3) * (m + 4)) * (m + 1)))
+                  (conv_BB6 m)).
+  assert (H7 := f_equal (Nat.mul 2) (bb_B7n m)).
+  assert (H8 := f_equal (Nat.mul (2 * ((m + 3) * (m + 4)))) (bb_B8n m)).
+  assert (H9 := f_equal (Nat.mul (4 * ((m + 3) * (m + 4)))) (bb_B9n m)).
+  assert (H10 := f_equal (Nat.mul (2 * ((m + 3) * (m + 4)))) (bb_B10_val m)).
+  assert (H11 := f_equal (Nat.mul (2 * ((m + 3) * (m + 4)))) (bb_B11_val m)).
+  assert (H12 := f_equal (Nat.mul ((m + 3) * (m + 4))) (bb_B12_val m IH)).
+  lia.
+Qed.
+
+Lemma BBCL_zero : BBCL 0.
+Proof. unfold BBCL. vm_compute. reflexivity. Qed.
+
+Lemma BBwptot_step : forall m,
+  (forall j, (j <= m)%nat -> BBCL j) -> BBCL (S m).
+Proof.
+  intros m IH.
+  assert (Hp : ((m + 3) * (m + 4) <> 0)%nat) by lia.
+  assert (H := BBwptot_step_scaled m IH).
+  apply (proj1 (Nat.mul_cancel_l _ _ _ Hp)) in H.
+  unfold BBCL.
+  assert (E : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma BBwptot_closed_upto : forall N m, (m <= N)%nat -> BBCL m.
+Proof.
+  induction N as [|N IHN]; intros m Hm.
+  - assert (Em : m = 0%nat) by lia. subst. exact BBCL_zero.
+  - destruct (Nat.eq_dec m (S N)) as [E|E].
+    + subst. apply BBwptot_step. intros j Hj. apply IHN. lia.
+    + apply IHN. lia.
+Qed.
+
+Theorem BBwptot_closed : forall n, BBCL n.
+Proof. intro n. apply (BBwptot_closed_upto n n). lia. Qed.
+
+Lemma BBtot_split : forall M, BBtot M = (Btot M + BBwptot M)%nat.
+Proof.
+  intro M. unfold BBtot, Btot, BBwptot.
+  rewrite <- (fold_add_split (list nat) (fun u => Bw u M)
+                (fun u => BBwp u M) (gen132 M)).
+  apply nfold_ext_in. intros u _. apply BBw_split.
+Qed.
+
+Theorem BBtot_closed : forall M,
+  (4 * BBtot M = M * (M + 3) * (S M * card132 M) + 2 * M * 4 ^ M)%nat.
+Proof.
+  intro M.
+  assert (S1 := BBtot_split M).
+  assert (S2 := Btot_closed M).
+  assert (S3 := BBwptot_closed M). unfold BBCL in S3.
+  assert (S4 := card132_binom M).
+  nia.
+Qed.

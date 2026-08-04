@@ -1905,3 +1905,20 @@ Print Assumptions bb_XL.
 Print Assumptions bb_YL.
 Print Assumptions bb_B8_val.
 Print Assumptions bb_B9_val.
+
+(* ---- the second-order level sum in closed form ---- *)
+Print Assumptions bb_R2.
+Print Assumptions bb_R3.
+Print Assumptions bb_R23.
+Print Assumptions bb_B2n.
+Print Assumptions bb_B3n.
+Print Assumptions bb_B4n.
+Print Assumptions bb_B5n.
+Print Assumptions bb_B7n.
+Print Assumptions bb_B8n.
+Print Assumptions bb_B9n.
+Print Assumptions BBwptot_step_scaled.
+Print Assumptions BBwptot_step.
+Print Assumptions BBwptot_closed.
+Print Assumptions BBtot_split.
+Print Assumptions BBtot_closed.
