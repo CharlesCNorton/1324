@@ -1828,3 +1828,14 @@ Print Assumptions GGwptot_closed.
 (* 2 GGwptot M + 4^M = (M+1) C(2M,M) *)
 Compute (map (fun M => ((2 * GGwptot M + 4 ^ M)%nat,
                         ((M + 1) * binomN (2 * M) M)%nat)) (seq 0 5)).
+
+(* ---- the triple shift and the safe-triple block ---- *)
+Print Assumptions TRIPtot_cat.
+Print Assumptions wsum_shift3.
+Print Assumptions conv_shift3.
+Print Assumptions conv_BB2.
+Print Assumptions conv_BB2_val.
+(* TRIPtot n + 3 Cat(n+2) = Cat(n+3) + Cat(n+1) *)
+Compute (map (fun n => ((TRIPtot n + 3 * card132 (S (S n)))%nat,
+                        (card132 (S (S (S n))) + card132 (S n))%nat))
+             (seq 0 4)).

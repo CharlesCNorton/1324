@@ -23650,3 +23650,94 @@ Proof.
   assert (E := Ttot_closed M).
   lia.
 Qed.
+
+(* The triple shift and the safe-triple block. *)
+
+
+Corollary TRIPtot_cat : forall n,
+  (TRIPtot n + 3 * card132 (S (S n))
+   = card132 (S (S (S n))) + card132 (S n))%nat.
+Proof.
+  intro n.
+  assert (A := TRIPtot_closed n).
+  assert (B := sccube_closed n).
+  lia.
+Qed.
+
+Lemma wsum_shift3 : forall w m,
+  (fold_right (fun k acc =>
+     (w k * (card132 k * card132 (S (S (S (m - k))))) + acc)%nat) 0%nat
+     (seq 0 (S m))
+   + 2 * (w (S m) * card132 (S m))
+   + w (S (S m)) * card132 (S (S m))
+   + w (S (S (S m))) * card132 (S (S (S m))))%nat
+  = wsum w (S (S (S m))).
+Proof.
+  intros w m.
+  rewrite <- (wsum_shift2 w (S m)).
+  rewrite (seq_snoc (S m) 0).
+  rewrite (nfold_app nat
+    (fun k => (w k * (card132 k * card132 (S (S (S m - k)))))%nat)).
+  rewrite (nfold_single nat
+    (fun k => (w k * (card132 k * card132 (S (S (S m - k)))))%nat) (0 + S m)).
+  cbn beta.
+  replace (0 + S m)%nat with (S m) by lia.
+  rewrite Nat.sub_diag. change (card132 2) with 2%nat.
+  assert (E : fold_right (fun k acc =>
+      (w k * (card132 k * card132 (S (S (S m - k)))) + acc)%nat) 0%nat
+      (seq 0 (S m))
+    = fold_right (fun k acc =>
+        (w k * (card132 k * card132 (S (S (S (m - k))))) + acc)%nat) 0%nat
+        (seq 0 (S m))).
+  { apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+    replace (S m - k)%nat with (S (m - k)) by lia. reflexivity. }
+  rewrite E. ring.
+Qed.
+
+Lemma conv_shift3 : forall w m,
+  (conv (fun k => (w k * card132 k)%nat) (fun n => card132 (S (S (S n)))) m
+   + 2 * (w (S m) * card132 (S m))
+   + w (S (S m)) * card132 (S (S m))
+   + w (S (S (S m))) * card132 (S (S (S m))))%nat
+  = wsum w (S (S (S m))).
+Proof.
+  intros w m. rewrite <- (wsum_shift3 w m).
+  f_equal. f_equal. f_equal.
+  unfold conv. apply nfold_ext_in. intros k _. cbn beta. ring.
+Qed.
+
+Lemma conv_BB2 : forall m,
+  (conv (fun k => (S k * card132 k)%nat) TRIPtot m
+   + 3 * conv (fun k => (S k * card132 k)%nat)
+             (fun n => card132 (S (S n))) m
+   = conv (fun k => (S k * card132 k)%nat)
+          (fun n => card132 (S (S (S n)))) m
+     + conv (fun k => (S k * card132 k)%nat) (fun n => card132 (S n)) m)%nat.
+Proof.
+  intro m.
+  rewrite <- (conv_scal_r 3 (fun k => (S k * card132 k)%nat)
+                (fun n => card132 (S (S n))) m).
+  rewrite <- (conv_add_r (fun k => (S k * card132 k)%nat) TRIPtot
+                (fun n => (3 * card132 (S (S n)))%nat) m).
+  rewrite <- (conv_add_r (fun k => (S k * card132 k)%nat)
+                (fun n => card132 (S (S (S n)))) (fun n => card132 (S n)) m).
+  apply conv_ext; [intros k _; reflexivity|].
+  intros n _. assert (K := TRIPtot_cat n). lia.
+Qed.
+
+(* the value of the TRIPtot block *)
+Lemma conv_BB2_val : forall m,
+  (conv (fun k => (S k * card132 k)%nat) TRIPtot m
+   + 3 * wsum S (S (S m))
+   + S (S (S (S m))) * card132 (S (S (S m)))
+   = wsum S (S (S (S m))) + wsum S (S m)
+     + 2 * (S (S (S m)) * card132 (S (S m))))%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB2 m).
+  assert (S1 := conv_shift1 S m).
+  assert (S2 := conv_shift2 S m).
+  assert (S3 := conv_shift3 S m).
+  cbn beta in S1, S2, S3.
+  lia.
+Qed.
