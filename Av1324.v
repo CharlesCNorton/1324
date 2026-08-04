@@ -24084,3 +24084,107 @@ Lemma conv_BB8 : forall m,
    + conv (fun k => (k * Ltot k)%nat) sctot m
    = m * conv Ltot sctot m)%nat.
 Proof. intro m. apply (conv_beta Ltot sctot m). Qed.
+
+(* The second-order level sum as a sum of convolutions. *)
+
+
+Lemma conv_BB6 : forall m, conv card132 card132 m = card132 (S m).
+Proof. intro m. unfold conv. rewrite <- (card132_convolution m). reflexivity. Qed.
+
+Lemma conv_BB5 : forall m,
+  (conv card132 sctot m + 2 * card132 (S m) = card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (A := conv_sctot card132 m).
+  assert (B := conv_V0 m).
+  assert (C := conv_BB6 m).
+  lia.
+Qed.
+
+Lemma conv_BB11 : forall m,
+  (2 * conv Ltot (fun n => (n * card132 n)%nat) m
+   + m * wsum S m + Bconv m
+   = m * Aconv m + wsum (fun k => (k * S k)%nat) m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_beta Ltot card132 m).
+  assert (B := conv_Ltot_cat m).
+  assert (C := conv_kLtot_cat m).
+  assert (D := f_equal (Nat.mul 2) A).
+  nia.
+Qed.
+
+Theorem BBwptot_conv : forall m,
+  BBwptot (S m)
+  = (conv card132 BBwptot m
+     + conv (fun k => (S k * card132 k)%nat) TRIPtot m
+     + conv (fun k => (k * card132 k)%nat) (fun n => (n * Ptot n)%nat) m
+     + S m * conv card132 Ptot m
+     + S m * conv card132 sctot m
+     + S m * conv card132 card132 m
+     + conv Awptot Ptot m
+     + conv Ltot (fun n => (n * sctot n)%nat) m
+     + conv Bwptot sctot m
+     + conv GGwptot (fun n => (n * card132 n)%nat) m
+     + conv Ltot (fun n => (n * card132 n)%nat) m
+     + conv BBwptot card132 m)%nat.
+Proof.
+  intro m. rewrite (BBwptot_expand m). unfold conv.
+  rewrite <- (nfold_scal nat (S m)
+    (fun k => (card132 k * Ptot (m - k))%nat) (seq 0 (S m))).
+  rewrite <- (nfold_scal nat (S m)
+    (fun k => (card132 k * sctot (m - k))%nat) (seq 0 (S m))).
+  rewrite <- (nfold_scal nat (S m)
+    (fun k => (card132 k * card132 (m - k))%nat) (seq 0 (S m))).
+  do 11 rewrite <- (fold_add_split nat).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk. cbn beta. ring.
+Qed.
+
+Lemma conv_wPtot : forall w m,
+  (conv (fun k => (w k * card132 k)%nat) Ptot m
+   + 2 * wsum w (S m) + w (S (S m)) * card132 (S (S m))
+   = wsum w (S (S m)) + w (S m) * card132 (S m))%nat.
+Proof.
+  intros w m.
+  assert (A := conv_Ptot (fun k => (w k * card132 k)%nat) m).
+  assert (B := conv_shift1 w m).
+  assert (C := conv_shift2 w m).
+  lia.
+Qed.
+
+Lemma conv_aPtot : forall m,
+  (conv (fun k => 4 ^ k) Ptot m + 2 * Aconv (S m) + 4 ^ (S (S m))
+   = Aconv (S (S m)) + 4 ^ (S m))%nat.
+Proof.
+  intro m.
+  assert (A := conv_Ptot (fun k => 4 ^ k) m).
+  assert (B := conv_a1 m).
+  assert (C := conv_a2 m).
+  lia.
+Qed.
+
+Lemma conv_Ltot_sctot : forall m,
+  (2 * conv Ltot sctot m + wsum S (S m) + 4 ^ (S m) + Aconv m
+   = Aconv (S m) + S (S m) * card132 (S m) + wsum S m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_sctot Ltot m).
+  assert (B := conv_Ltot_cat m).
+  assert (C := conv_Ltot_shift m).
+  assert (D := f_equal (Nat.mul 2) A).
+  lia.
+Qed.
+
+Lemma conv_kLtot_sctot : forall m,
+  (2 * conv (fun k => (k * Ltot k)%nat) sctot m
+   + wsum (fun k => (k * S k)%nat) (S m) + S m * 4 ^ (S m) + Bconv m
+   = Bconv (S m) + S m * S (S m) * card132 (S m)
+     + wsum (fun k => (k * S k)%nat) m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_sctot (fun k => (k * Ltot k)%nat) m).
+  assert (B := conv_kLtot_cat m).
+  assert (C := conv_kLtot_shift m).
+  assert (D := f_equal (Nat.mul 2) A).
+  lia.
+Qed.

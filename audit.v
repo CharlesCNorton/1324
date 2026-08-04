@@ -1864,3 +1864,13 @@ Print Assumptions conv_BB9_val.
 Print Assumptions conv_BB7.
 Print Assumptions conv_BB3.
 Print Assumptions conv_BB8.
+
+(* ---- the second-order level sum as a sum of convolutions ---- *)
+Print Assumptions conv_BB6.
+Print Assumptions conv_BB5.
+Print Assumptions conv_BB11.
+Print Assumptions BBwptot_conv.
+Print Assumptions conv_wPtot.
+Print Assumptions conv_aPtot.
+Print Assumptions conv_Ltot_sctot.
+Print Assumptions conv_kLtot_sctot.
