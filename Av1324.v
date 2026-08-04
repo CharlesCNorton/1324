@@ -23254,3 +23254,134 @@ Proof.
              (NoDup_filter (fun z => Nat.leb x z) Hnd)).
   unfold cntge. lia.
 Qed.
+
+(* The ordered triple count of a duplicate-free list. *)
+
+
+Lemma btw_cntge : forall L x y,
+  fold_right (fun v acc =>
+    ((if andb (Nat.leb y v) (Nat.leb v x) then 1 else 0) + acc)%nat) 0%nat L
+  = cntge (filter (fun z => Nat.leb z x) L) y.
+Proof.
+  intros L x y. unfold cntge.
+  rewrite (filter_filter nat (fun z => Nat.leb z x) (fun z => Nat.leb y z) L).
+  rewrite (length_filter_fold nat
+             (fun z => andb (Nat.leb z x) (Nat.leb y z)) L).
+  apply nfold_ext_in. intros v _. rewrite Bool.andb_comm. reflexivity.
+Qed.
+
+Lemma cnt2ge_cons : forall x L y,
+  cnt2ge (x :: L) y
+  = ((if Nat.leb y x then S (cntge L x) else 0)
+     + cntge (filter (fun z => Nat.leb z x) L) y
+     + cnt2ge L y)%nat.
+Proof.
+  intros x L y. unfold cnt2ge. cbn [fold_right].
+  rewrite (cntge_cons x L x), Nat.leb_refl.
+  assert (E : fold_right (fun v acc =>
+        ((if Nat.leb y v then cntge (x :: L) v else 0) + acc)%nat) 0%nat L
+    = (cntge (filter (fun z => Nat.leb z x) L) y
+       + fold_right (fun v acc =>
+           ((if Nat.leb y v then cntge L v else 0) + acc)%nat) 0%nat L)%nat).
+  { transitivity (fold_right (fun v acc =>
+        ((if andb (Nat.leb y v) (Nat.leb v x) then 1 else 0)
+         + (if Nat.leb y v then cntge L v else 0) + acc)%nat) 0%nat L).
+    - apply nfold_ext_in. intros v _. rewrite (cntge_cons x L v).
+      destruct (Nat.leb y v); destruct (Nat.leb v x); cbn [andb]; lia.
+    - rewrite (fold_add_split nat
+                 (fun v => if andb (Nat.leb y v) (Nat.leb v x) then 1 else 0)
+                 (fun v => if Nat.leb y v then cntge L v else 0) L).
+      cbn beta. rewrite (btw_cntge L x y). reflexivity. }
+  rewrite E.
+  destruct (Nat.leb y x); lia.
+Qed.
+
+Lemma cntge_le_zero : forall L x y, x < y ->
+  cntge (filter (fun z => Nat.leb z x) L) y = 0%nat.
+Proof.
+  intros L x y Hxy. rewrite <- (btw_cntge L x y).
+  transitivity (fold_right (fun v acc => (0 + acc)%nat) 0%nat L).
+  - apply nfold_ext_in. intros v _.
+    destruct (Nat.leb_spec y v) as [Hyv|Hyv];
+      destruct (Nat.leb_spec v x) as [Hvx|Hvx]; cbn [andb];
+      try reflexivity. lia.
+  - rewrite (nfold_const nat 0 L). ring.
+Qed.
+
+Lemma btw_total : forall L x,
+  fold_right (fun y acc =>
+    (cntge (filter (fun z => Nat.leb z x) L) y + acc)%nat) 0%nat L
+  = pairge (filter (fun z => Nat.leb z x) L).
+Proof.
+  intros L x. unfold pairge.
+  transitivity (fold_right (fun y acc =>
+      ((if Nat.leb y x
+        then cntge (filter (fun z => Nat.leb z x) L) y else 0) + acc)%nat)
+      0%nat L).
+  - apply nfold_ext_in. intros y _.
+    destruct (Nat.leb_spec y x) as [Hyx|Hyx]; [reflexivity|].
+    rewrite (cntge_le_zero L x y ltac:(lia)). reflexivity.
+  - rewrite (nfold_filter nat (fun z => Nat.leb z x)
+               (fun y => cntge (filter (fun z => Nat.leb z x) L) y) L).
+    reflexivity.
+Qed.
+
+Lemma cntge_eq_zero : forall L x, ~ In x L ->
+  cntge (filter (fun z => Nat.leb z x) L) x = 0%nat.
+Proof.
+  intros L x Hnx. rewrite <- (btw_cntge L x x).
+  transitivity (fold_right (fun v acc => (0 + acc)%nat) 0%nat L).
+  - apply nfold_ext_in. intros v Hv.
+    destruct (Nat.leb_spec x v) as [H1|H1];
+      destruct (Nat.leb_spec v x) as [H2|H2]; cbn [andb]; try reflexivity.
+    exfalso. apply Hnx. replace x with v by lia. exact Hv.
+  - rewrite (nfold_const nat 0 L). ring.
+Qed.
+
+Lemma tripge_cons_shape : forall x L, ~ In x L ->
+  tripge (x :: L)
+  = (S (cntge L x) + cnt2ge L x
+     + (S (cntge L x) * length (filter (fun z => Nat.leb z x) L)
+        + pairge (filter (fun z => Nat.leb z x) L) + tripge L))%nat.
+Proof.
+  intros x L Hnx.
+  assert (E : fold_right (fun y acc => (cnt2ge (x :: L) y + acc)%nat) 0%nat L
+    = (S (cntge L x) * length (filter (fun z => Nat.leb z x) L)
+       + pairge (filter (fun z => Nat.leb z x) L) + tripge L)%nat).
+  { transitivity (fold_right (fun y acc =>
+        ((if Nat.leb y x then S (cntge L x) else 0)
+         + cntge (filter (fun z => Nat.leb z x) L) y
+         + cnt2ge L y + acc)%nat) 0%nat L).
+    - apply nfold_ext_in. intros y _. apply cnt2ge_cons.
+    - rewrite (nfold_three nat
+                 (fun y => if Nat.leb y x then S (cntge L x) else 0)
+                 (fun y => cntge (filter (fun z => Nat.leb z x) L) y)
+                 (fun y => cnt2ge L y) L).
+      cbn beta.
+      rewrite (nfold_filter nat (fun z => Nat.leb z x)
+                 (fun _ : nat => S (cntge L x)) L).
+      rewrite (nfold_const nat (S (cntge L x))
+                 (filter (fun z => Nat.leb z x) L)).
+      rewrite (btw_total L x).
+      unfold tripge. lia. }
+  unfold tripge at 1. cbn [fold_right].
+  rewrite (cnt2ge_cons x L x), Nat.leb_refl, (cntge_eq_zero L x Hnx).
+  rewrite E. lia.
+Qed.
+
+Lemma tripge_val : forall L, NoDup L ->
+  (6 * tripge L = length L * (length L + 1) * (length L + 2))%nat.
+Proof.
+  induction L as [|x L IH]; intro Hnd; [reflexivity|].
+  inversion Hnd as [|z r Hnx Hnd' Heq]; subst.
+  assert (IHL := IH Hnd').
+  assert (Hsp := split_at_point x L Hnx).
+  assert (K1 := cnt2ge_val L x Hnd').
+  assert (K2 := pairge_val (filter (fun z => Nat.leb z x) L)
+                  (NoDup_filter (fun z => Nat.leb z x) Hnd')).
+  rewrite (tripge_cons_shape x L Hnx).
+  unfold cntge in *. cbn [length].
+  remember (length (filter (fun z => Nat.leb x z) L)) as q eqn:Eq.
+  remember (length (filter (fun z => Nat.leb z x) L)) as p eqn:Ep.
+  nia.
+Qed.

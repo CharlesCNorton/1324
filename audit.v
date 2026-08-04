@@ -1794,3 +1794,15 @@ Compute (let a := (1 :: 0 :: nil) in let b := (0 :: 2 :: 1 :: nil) in
 Print Assumptions cntge_filter_ge.
 Print Assumptions cnt2ge_pairge.
 Print Assumptions cnt2ge_val.
+
+(* ---- the ordered triple count ---- *)
+Print Assumptions btw_cntge.
+Print Assumptions cnt2ge_cons.
+Print Assumptions btw_total.
+Print Assumptions tripge_cons_shape.
+Print Assumptions tripge_val.
+(* 6 tripge L = |L|(|L|+1)(|L|+2) on the safe values of a small word *)
+Compute (map (fun b => let L := safelist b 4 in
+                       ((6 * tripge L)%nat,
+                        (length L * (length L + 1) * (length L + 2))%nat))
+             (gen132f 4)).
