@@ -1820,3 +1820,11 @@ Compute (map (fun n => ((6 * TRIPtot n + card132 (S n))%nat, sccube n))
 Print Assumptions BBw_split.
 Print Assumptions BBwp_midmax.
 Print Assumptions BBwptot_expand.
+
+(* ---- the subtree gap total ---- *)
+Print Assumptions GGin_root.
+Print Assumptions GGwptot_split.
+Print Assumptions GGwptot_closed.
+(* 2 GGwptot M + 4^M = (M+1) C(2M,M) *)
+Compute (map (fun M => ((2 * GGwptot M + 4 ^ M)%nat,
+                        ((M + 1) * binomN (2 * M) M)%nat)) (seq 0 5)).

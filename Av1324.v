@@ -23609,3 +23609,44 @@ Proof.
                (gen132 k)).
     unfold BBwptot, GGwptot, Ltot, Bwptot, card132. nia.
 Qed.
+
+(* The subtree gap total. *)
+
+
+Lemma GGin_root : forall u M, GGin u M 0 = Lsum u M.
+Proof.
+  intros u M. unfold GGin, Lsum. rewrite Hu_zero.
+  replace (M - 0) with M by lia. reflexivity.
+Qed.
+
+Lemma GGw_split_wp : forall u M, GGw u M = (Lsum u M + GGwp u M)%nat.
+Proof.
+  intros u M. unfold GGw, GGwp.
+  change (seq 0 (S M)) with (0%nat :: seq 1 M).
+  rewrite (nfold_cons nat (GGin u M) 0%nat (seq 1 M)).
+  rewrite (GGin_root u M). reflexivity.
+Qed.
+
+Lemma GGwptot_split : forall M,
+  (Ltot M + GGwptot M + Ytot M + Ttot M = Btot M)%nat.
+Proof.
+  intro M.
+  assert (E : (Ltot M + GGwptot M)%nat = GGtot M).
+  { unfold Ltot, GGwptot, GGtot.
+    rewrite <- (fold_add_split (list nat) (fun u => Lsum u M)
+                  (fun u => GGwp u M) (gen132 M)).
+    apply nfold_ext_in. intros u _. symmetry. apply GGw_split_wp. }
+  assert (K := GGtot_split M). lia.
+Qed.
+
+Corollary GGwptot_closed : forall M,
+  (2 * GGwptot M + 4 ^ M = (M + 1) * binomN (2 * M) M)%nat.
+Proof.
+  intro M.
+  assert (A := GGwptot_split M).
+  assert (B := Btot_closed M).
+  assert (C := Ltot_closed M).
+  assert (D := Ytot_closed M).
+  assert (E := Ttot_closed M).
+  lia.
+Qed.
