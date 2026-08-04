@@ -1752,3 +1752,12 @@ Print Assumptions Ttot_closed.
 Compute (map (fun M => ((8 * Ytot M)%nat, (8 * Ttot M)%nat,
                         (2 * M * binomN (2 * M) M + M * 4 ^ M)%nat))
              (seq 0 5)).
+
+(* ---- the third moment of the split count ---- *)
+Print Assumptions seq2_sq.
+Print Assumptions scsq_shift.
+Print Assumptions sccube_closed.
+(* sccube M + 18 Cat(M+2) = 6 Cat(M+3) + 7 Cat(M+1) *)
+Compute (map (fun M => ((sccube M + 18 * card132 (S (S M)))%nat,
+                        (6 * card132 (S (S (S M))) + 7 * card132 (S M))%nat))
+             (seq 0 4)).

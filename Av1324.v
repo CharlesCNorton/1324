@@ -22723,3 +22723,103 @@ Proof.
   assert (Cb4 := f_equal (Nat.mul (2 * M * M * M)) Cb).
   nia.
 Qed.
+
+(* The third moment of the split count. *)
+
+
+(* The third moment of the split count.  The children of a 132-avoider carry
+   split counts 2, ..., s+1, so the second moment one level up is the third
+   moment here, and the two together close in shifted Catalan numbers. *)
+
+Definition sccube (m : nat) : nat :=
+  fold_right (fun u acc =>
+    (sccount u m * sccount u m * sccount u m + acc)%nat) 0%nat (gen132 m).
+
+Lemma seq2_sq : forall s,
+  (6 * fold_right (fun j acc => (j * j + acc)%nat) 0%nat (seq 2 s) + 6
+   = (s + 1) * (s + 2) * (2 * s + 3))%nat.
+Proof.
+  induction s as [|s IH]; [reflexivity|].
+  rewrite (seq_snoc s 2).
+  rewrite (nfold_app nat (fun j => (j * j)%nat)).
+  rewrite (nfold_single nat (fun j => (j * j)%nat) (2 + s)).
+  cbn beta. nia.
+Qed.
+
+Theorem scsq_shift : forall m,
+  (6 * scsq (S m)
+   = 2 * sccube m + 9 * scsq m + 13 * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (H1 : scsq (S m)
+    = fold_right (fun u acc =>
+        (fold_right (fun j acc' => (j * j + acc')%nat) 0%nat
+                    (seq 2 (sccount u m)) + acc)%nat) 0%nat (gen132 m)).
+  { unfold scsq. rewrite (children_gen132 m).
+    rewrite (nfold_flat_map (list nat) (list nat)
+               (fun w => (sccount w (S m) * sccount w (S m))%nat)
+               (fun u => children u m) (gen132 m)).
+    apply nfold_ext_in. intros u Hu.
+    assert (Hp : is_perm u m) by (apply gen132_perm; exact Hu).
+    rewrite <- (nfold_map_gen (list nat) nat (fun j => (j * j)%nat)
+                 (fun w => sccount w (S m)) (children u m)).
+    apply (nfold_perm nat (fun j => (j * j)%nat)
+             (map (fun w => sccount w (S m)) (children u m))
+             (seq 2 (sccount u m)) (children_sccounts u m Hp)). }
+  assert (H2 : (6 * scsq (S m) + 6 * card132 m
+    = fold_right (fun u acc =>
+        ((sccount u m + 1) * (sccount u m + 2) * (2 * sccount u m + 3)
+         + acc)%nat) 0%nat (gen132 m))%nat).
+  { rewrite H1.
+    assert (Hc6 : (6 * card132 m)%nat
+      = fold_right (fun (_ : list nat) (acc : nat) => (6 + acc)%nat) 0%nat
+                   (gen132 m)).
+    { rewrite (nfold_const (list nat) 6 (gen132 m)). unfold card132. ring. }
+    rewrite Hc6.
+    rewrite <- (nfold_scal (list nat) 6
+                 (fun u => fold_right (fun j acc => (j * j + acc)%nat) 0%nat
+                             (seq 2 (sccount u m))) (gen132 m)).
+    rewrite <- (fold_add_split (list nat)
+                 (fun u => (6 * fold_right (fun j acc => (j * j + acc)%nat)
+                              0%nat (seq 2 (sccount u m)))%nat)
+                 (fun _ : list nat => 6%nat) (gen132 m)).
+    apply nfold_ext_in. intros u _. apply seq2_sq. }
+  assert (H3 : fold_right (fun u acc =>
+        ((sccount u m + 1) * (sccount u m + 2) * (2 * sccount u m + 3)
+         + acc)%nat) 0%nat (gen132 m)
+    = (2 * sccube m + 9 * scsq m + 13 * card132 (S m) + 6 * card132 m)%nat).
+  { assert (Hc6 : (6 * card132 m)%nat
+      = fold_right (fun (_ : list nat) (acc : nat) => (6 + acc)%nat) 0%nat
+                   (gen132 m)).
+    { rewrite (nfold_const (list nat) 6 (gen132 m)). unfold card132. ring. }
+    rewrite (card132_sccount m), Hc6.
+    unfold sccube, scsq.
+    rewrite <- (nfold_scal (list nat) 2
+                 (fun u => (sccount u m * sccount u m * sccount u m)%nat)
+                 (gen132 m)).
+    rewrite <- (nfold_scal (list nat) 9
+                 (fun u => (sccount u m * sccount u m)%nat) (gen132 m)).
+    rewrite <- (nfold_scal (list nat) 13 (fun u => sccount u m) (gen132 m)).
+    rewrite <- (nfold_four (list nat)
+                 (fun u => (2 * (sccount u m * sccount u m * sccount u m))%nat)
+                 (fun u => (9 * (sccount u m * sccount u m))%nat)
+                 (fun u => (13 * sccount u m)%nat)
+                 (fun _ : list nat => 6%nat) (gen132 m)).
+    cbn beta.
+    apply nfold_ext_in. intros u _. ring. }
+  assert (Hc : card132 m = fold_right (fun (_ : list nat) (acc : nat) =>
+                              (1 + acc)%nat) 0%nat (gen132 m)).
+  { rewrite (nfold_const (list nat) 1 (gen132 m)). unfold card132. ring. }
+  lia.
+Qed.
+
+Theorem sccube_closed : forall m,
+  (sccube m + 18 * card132 (S (S m))
+   = 6 * card132 (S (S (S m))) + 7 * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := scsq_shift m).
+  assert (B := scsq_closed m).
+  assert (C := scsq_closed (S m)).
+  lia.
+Qed.
