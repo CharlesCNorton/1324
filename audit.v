@@ -1874,3 +1874,28 @@ Print Assumptions conv_wPtot.
 Print Assumptions conv_aPtot.
 Print Assumptions conv_Ltot_sctot.
 Print Assumptions conv_kLtot_sctot.
+
+(* ---- closed values for the blocks of the second-order level sum ---- *)
+Print Assumptions wsum_3k1_val.
+Print Assumptions wsum_kSk_val.
+Print Assumptions wsum_SkSk_val.
+Print Assumptions wsum_kkSk_val.
+Print Assumptions wsum_SkSkmk_val.
+Print Assumptions wsum_kk1_val.
+Print Assumptions Aconv_val.
+Print Assumptions Bconv_norm.
+Print Assumptions Bconv_c1.
+Print Assumptions cratio.
+Print Assumptions bb_B1_val.
+Print Assumptions bb_B2_val.
+Print Assumptions bb_B3_val.
+Print Assumptions bb_B7_val.
+Print Assumptions bb_B10_val.
+Print Assumptions bb_B11_val.
+Print Assumptions bb_B12_val.
+Print Assumptions bb_X31.
+Print Assumptions bb_Xkk1.
+Print Assumptions bb_Xa.
+Print Assumptions domino_5.
+Print Assumptions tromino_5.
+Print Assumptions chebyshev_le_5.

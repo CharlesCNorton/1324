@@ -9013,10 +9013,10 @@ Theorem chebyshev_upto_4 : forall m, (m <= 4)%nat -> chebyshev_holds m = true.
 Proof.
   intros m Hm. rewrite <- chebyshev_holdsZ_eq.
   destruct m as [|[|[|[|[|m]]]]]; try lia.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
   - exact chebyshevZ_4.
 Qed.
 
@@ -13488,18 +13488,19 @@ Admitted.
 Open Scope nat_scope.
 
 Theorem domino_5 : Z.of_nat (Dcount 5 5) = 255642%Z.
-Proof. rewrite <- Dcountf_eq. vm_compute. reflexivity. Qed.
+Proof. rewrite <- Dcountf_eq. vm_cast_no_check (@eq_refl Z 255642%Z). Qed.
 
 Theorem tromino_count_3 : Tromino 3 = Tcount 3.
 Proof. apply tromino_eq_Tcount. Qed.
 
 Theorem tromino_3 : Z.of_nat (Tromino 3) = 36325%Z.
 Proof.
-  rewrite tromino_eq_Tcount, <- Tz_eq, <- Tzf_eq. vm_compute. reflexivity.
+  rewrite tromino_eq_Tcount, <- Tz_eq, <- Tzf_eq.
+  vm_cast_no_check (@eq_refl Z 36325%Z).
 Qed.
 
 Theorem tromino_5 : Tz 5 = 1615228302%Z.
-Proof. rewrite <- Tzf_eq. vm_compute. reflexivity. Qed.
+Proof. rewrite <- Tzf_eq. vm_cast_no_check (@eq_refl Z 1615228302%Z). Qed.
 
 Lemma card132_5_val : card132 5 = 42%nat.
 Proof. vm_compute. reflexivity. Qed.
@@ -13516,10 +13517,10 @@ Theorem chebyshevZ_upto_5 : forall m, (m <= 5)%nat -> chebyshev_holdsZ m = true.
 Proof.
   intros m Hm.
   destruct m as [|[|[|[|[|[|m]]]]]]; try lia.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
-  - rewrite <- chebyshev_holdsZf_eq; vm_compute; reflexivity.
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
+  - rewrite <- chebyshev_holdsZf_eq; vm_cast_no_check (@eq_refl bool true).
   - exact chebyshevZ_4.
   - exact chebyshevZ_5.
 Qed.
