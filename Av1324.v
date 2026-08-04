@@ -23015,3 +23015,196 @@ Proof.
   intros u M. unfold BBin, Bw. rewrite Hu_zero.
   replace (M - 0) with M by lia. reflexivity.
 Qed.
+
+(* The second-order subtree sum under the max-split. *)
+
+
+Definition TRIPw (b : list nat) (n : nat) : nat :=
+  fold_right (fun y acc => ((if safeb b y then TPG b n y else 0) + acc)%nat)
+             0%nat (seq 1 n).
+
+Definition BBwp (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (BBin u M y + acc)%nat) 0%nat (seq 1 M).
+
+Definition GGwp (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (GGin u M y + acc)%nat) 0%nat (seq 1 M).
+
+Lemma BBin_top : forall u M, BBin u M M = Bin u M M.
+Proof.
+  intros u M. unfold BBin. rewrite Hu_top.
+  replace (M - M) with 0 by lia.
+  replace (seq M 1) with (M :: nil) by reflexivity.
+  cbn [fold_right]. lia.
+Qed.
+
+Lemma BBin_safe_right : forall b y,
+  is_perm b (length b) -> safe_at b y ->
+  BBin b (length b) y = TBin b (length b) y.
+Proof.
+  intros b y Hpb Hs. unfold BBin, TBin.
+  rewrite (proj1 (safe_iff_Hu b y Hpb) Hs). reflexivity.
+Qed.
+
+Theorem BBw_midmax : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  BBw (midmax a b) (length a + S (length b))
+  = (Bw (midmax a b) (length a + S (length b))
+     + BBwp b (length b)
+     + (length a + 1) * TRIPw b (length b)
+     + (length a * length b + Awp a (length a)
+        + (length a + S (length b))) * pairge (safelist b (length b))
+     + length (safelist b (length b))
+       * (length b * Lsum a (length a) + Bwp a (length a)
+          + (length a + S (length b)))
+     + length b * (GGwp a (length a) + Lsum a (length a))
+     + BBwp a (length a)
+     + (length a + S (length b)))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  assert (Etop : Bin (midmax a b) (length a + S (length b))
+                     (length a + S (length b)) = (length a + S (length b))%nat).
+  { unfold Bin. rewrite Hu_top.
+    replace (length a + S (length b) - (length a + S (length b)))
+      with 0 by lia.
+    replace (seq (length a + S (length b)) 1)
+      with ((length a + S (length b)) :: nil) by reflexivity.
+    cbn [fold_right]. rewrite Hu_top. lia. }
+  assert (Plo : fold_right (fun y acc =>
+      (BBin (midmax a b) (length a + S (length b)) y + acc)%nat) 0%nat
+      (seq 1 (length b))
+    = (BBwp b (length b) + (length a + 1) * TRIPw b (length b)
+       + (length a * length b + Awp a (length a)
+          + (length a + S (length b))) * pairge (safelist b (length b))
+       + length (safelist b (length b))
+         * (length b * Lsum a (length a) + Bwp a (length a)
+            + (length a + S (length b))))%nat).
+  { transitivity (fold_right (fun y acc =>
+        (BBin b (length b) y
+         + (if safeb b y
+            then ((length a + 1) * TPG b (length b) y)%nat else 0)
+         + (if safeb b y
+            then ((length a * length b + Awp a (length a)
+                   + (length a + S (length b)))
+                  * cntge (safelist b (length b)) y)%nat else 0)
+         + (if safeb b y
+            then (length b * Lsum a (length a) + Bwp a (length a)
+                  + (length a + S (length b)))%nat else 0)
+         + acc)%nat) 0%nat (seq 1 (length b))).
+    - apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+      destruct (safeb b y) eqn:Es.
+      + assert (Hs : safe_at b y) by (apply safeb_spec; exact Es).
+        rewrite (BBin_lo_safe a b y Hpa Hpb ltac:(lia) ltac:(lia) Hs).
+        rewrite (BBin_safe_right b y Hpb Hs). lia.
+      + assert (Hns : ~ safe_at b y).
+        { intro C. assert (K : safeb b y = true) by (apply safeb_spec; exact C).
+          rewrite Es in K. discriminate. }
+        rewrite (BBin_lo_unsafe a b y Hpa Hpb ltac:(lia) ltac:(lia) Hns). lia.
+    - rewrite (nfold_four nat (fun y => BBin b (length b) y)
+                 (fun y => if safeb b y
+                           then ((length a + 1) * TPG b (length b) y)%nat
+                           else 0)
+                 (fun y => if safeb b y
+                           then ((length a * length b + Awp a (length a)
+                                  + (length a + S (length b)))
+                                 * cntge (safelist b (length b)) y)%nat
+                           else 0)
+                 (fun y => if safeb b y
+                           then (length b * Lsum a (length a)
+                                 + Bwp a (length a)
+                                 + (length a + S (length b)))%nat
+                           else 0)
+                 (seq 1 (length b))).
+      cbn beta.
+      assert (Q1 : fold_right (fun y acc =>
+          ((if safeb b y
+            then ((length a + 1) * TPG b (length b) y)%nat else 0) + acc)%nat)
+          0%nat (seq 1 (length b))
+        = ((length a + 1) * TRIPw b (length b))%nat).
+      { unfold TRIPw.
+        rewrite <- (nfold_scal nat (length a + 1)
+                      (fun y => if safeb b y then TPG b (length b) y else 0)
+                      (seq 1 (length b))).
+        apply nfold_ext_in. intros y _. destruct (safeb b y); lia. }
+      assert (Q2 : fold_right (fun y acc =>
+          ((if safeb b y
+            then ((length a * length b + Awp a (length a)
+                   + (length a + S (length b)))
+                  * cntge (safelist b (length b)) y)%nat else 0) + acc)%nat)
+          0%nat (seq 1 (length b))
+        = ((length a * length b + Awp a (length a)
+            + (length a + S (length b))) * pairge (safelist b (length b)))%nat).
+      { transitivity (fold_right (fun y acc =>
+            ((length a * length b + Awp a (length a)
+              + (length a + S (length b)))
+             * (if safeb b y then cntge (safelist b (length b)) y else 0)
+             + acc)%nat) 0%nat (seq 1 (length b))).
+        - apply nfold_ext_in. intros y _. destruct (safeb b y); lia.
+        - rewrite (nfold_scal nat (length a * length b + Awp a (length a)
+                     + (length a + S (length b)))
+                     (fun y => if safeb b y
+                               then cntge (safelist b (length b)) y else 0)
+                     (seq 1 (length b))).
+          rewrite (nfold_filter nat (safeb b)
+                     (fun y => cntge (safelist b (length b)) y)
+                     (seq 1 (length b))).
+          unfold pairge, safelist. reflexivity. }
+      assert (Q3 : fold_right (fun y acc =>
+          ((if safeb b y
+            then (length b * Lsum a (length a) + Bwp a (length a)
+                  + (length a + S (length b)))%nat else 0) + acc)%nat)
+          0%nat (seq 1 (length b))
+        = (length (safelist b (length b))
+           * (length b * Lsum a (length a) + Bwp a (length a)
+              + (length a + S (length b))))%nat).
+      { rewrite (nfold_filter nat (safeb b)
+                   (fun _ : nat => (length b * Lsum a (length a)
+                                    + Bwp a (length a)
+                                    + (length a + S (length b)))%nat)
+                   (seq 1 (length b))).
+        rewrite (nfold_const nat (length b * Lsum a (length a)
+                   + Bwp a (length a) + (length a + S (length b)))
+                   (filter (safeb b) (seq 1 (length b)))).
+        unfold safelist. lia. }
+      rewrite Q1, Q2, Q3. unfold BBwp. lia. }
+  assert (Phi : fold_right (fun y acc =>
+      (BBin (midmax a b) (length a + S (length b)) y + acc)%nat) 0%nat
+      (seq (S (length b)) (length a))
+    = (length b * (GGwp a (length a) + Lsum a (length a))
+       + BBwp a (length a))%nat).
+  { replace (seq (S (length b)) (length a))
+      with (map (fun t => t + length b) (seq 1 (length a)))
+      by (rewrite seq_add_map; reflexivity).
+    rewrite (nfold_map_gen nat nat
+               (BBin (midmax a b) (length a + S (length b)))
+               (fun t => t + length b) (seq 1 (length a))).
+    cbn beta.
+    transitivity (fold_right (fun t acc =>
+        (length b * (GGin a (length a) t + S (hgap a (length a) t))
+         + BBin a (length a) t + acc)%nat) 0%nat (seq 1 (length a))).
+    - apply nfold_ext_in. intros t Ht. apply in_seq in Ht.
+      apply (BBin_hi a b t Hpa Hpb ltac:(lia) ltac:(lia)).
+    - rewrite (fold_add_split nat
+                 (fun t => (length b
+                            * (GGin a (length a) t
+                               + S (hgap a (length a) t)))%nat)
+                 (fun t => BBin a (length a) t) (seq 1 (length a))).
+      cbn beta.
+      rewrite (nfold_scal nat (length b)
+                 (fun t => (GGin a (length a) t
+                            + S (hgap a (length a) t))%nat)
+                 (seq 1 (length a))).
+      rewrite (fold_add_split nat (fun t => GGin a (length a) t)
+                 (fun t => S (hgap a (length a) t)) (seq 1 (length a))).
+      cbn beta.
+      rewrite (nfold_succ_gap a (length a)).
+      unfold GGwp, BBwp. reflexivity. }
+  unfold BBw. rewrite (seq_split_three (length a) (length b)).
+  rewrite !(nfold_app nat (BBin (midmax a b) (length a + S (length b)))).
+  replace (seq 0 1) with (0%nat :: @nil nat) by reflexivity.
+  replace (seq (length a + S (length b)) 1)
+    with ((length a + S (length b)) :: nil) by reflexivity.
+  rewrite !(nfold_single nat (BBin (midmax a b) (length a + S (length b)))).
+  rewrite (BBin_root (midmax a b) (length a + S (length b))).
+  rewrite (BBin_top (midmax a b) (length a + S (length b))), Etop.
+  rewrite Plo, Phi. lia.
+Qed.

@@ -1770,3 +1770,22 @@ Print Assumptions BBin_hi.
 (* ---- the safe branch of the second-order subtree sum ---- *)
 Print Assumptions BBin_lo_safe.
 Print Assumptions BBin_root.
+
+(* ---- the second-order subtree sum under the max-split ---- *)
+Print Assumptions BBin_top.
+Print Assumptions BBin_safe_right.
+Print Assumptions BBw_midmax.
+(* the max-split recursion for BBw, at a small pair *)
+Compute (let a := (1 :: 0 :: nil) in let b := (0 :: 2 :: 1 :: nil) in
+         (BBw (midmax a b) (length a + S (length b)),
+          (Bw (midmax a b) (length a + S (length b))
+           + BBwp b (length b)
+           + (length a + 1) * TRIPw b (length b)
+           + (length a * length b + Awp a (length a)
+              + (length a + S (length b))) * pairge (safelist b (length b))
+           + length (safelist b (length b))
+             * (length b * Lsum a (length a) + Bwp a (length a)
+                + (length a + S (length b)))
+           + length b * (GGwp a (length a) + Lsum a (length a))
+           + BBwp a (length a)
+           + (length a + S (length b)))%nat)).
