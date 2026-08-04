@@ -22370,3 +22370,121 @@ Proof.
     rewrite (nfold_scal (list nat) (m - k) (fun a => Awp a k) (gen132 k)).
     unfold YHtot, Awptot, card132. ring.
 Qed.
+
+(* The blocks of the position-weighted level sum. *)
+
+
+Lemma nfold_seven : forall (A : Type) (g1 g2 g3 g4 g5 g6 g7 : A -> nat)
+                           (l : list A),
+  fold_right (fun x acc =>
+    (g1 x + g2 x + g3 x + g4 x + g5 x + g6 x + g7 x + acc)%nat) 0%nat l
+  = (fold_right (fun x acc => (g1 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g2 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g3 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g4 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g5 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g6 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g7 x + acc)%nat) 0%nat l)%nat.
+Proof.
+  intros A g1 g2 g3 g4 g5 g6 g7. induction l as [|a l IH];
+    cbn [fold_right]; [reflexivity|]. rewrite IH. lia.
+Qed.
+
+Definition YHCL (n : nat) : Prop :=
+  (24 * YHtot n + 2 * n * (S n * card132 n)
+   = 8 * n * n * (S n * card132 n) + 3 * n * 4 ^ n)%nat.
+
+Lemma conv_YA : forall m,
+  (forall j, (j <= m)%nat -> YHCL j) ->
+  (24 * conv card132 YHtot m + wsum (fun k => (2 * k * (k + 1))%nat) m
+   = wsum (fun k => (8 * k * k * (k + 1))%nat) m + 3 * Bconv m)%nat.
+Proof.
+  intros m IH.
+  assert (E : (conv card132 (fun n => (24 * YHtot n)%nat) m
+               + conv card132 (fun n => (2 * n * (n + 1) * card132 n)%nat) m
+               = conv card132 (fun n => (8 * n * n * (n + 1) * card132 n
+                                         + 3 * (n * 4 ^ n))%nat) m)%nat).
+  { rewrite <- (conv_add_r card132 (fun n => (24 * YHtot n)%nat)
+                  (fun n => (2 * n * (n + 1) * card132 n)%nat) m).
+    apply conv_ext; [intros k _; reflexivity|].
+    intros n Hn. assert (K := IH n Hn). unfold YHCL in K. nia. }
+  rewrite (conv_scal_r 24 card132 YHtot m) in E.
+  rewrite (conv_catw (fun n => (2 * n * (n + 1))%nat) m) in E.
+  rewrite (conv_add_r card132 (fun n => (8 * n * n * (n + 1) * card132 n)%nat)
+             (fun n => (3 * (n * 4 ^ n))%nat) m) in E.
+  rewrite (conv_catw (fun n => (8 * n * n * (n + 1))%nat) m) in E.
+  rewrite (conv_scal_r 3 card132 (fun n => (n * 4 ^ n)%nat) m) in E.
+  rewrite (conv_rev card132 (fun n => (n * 4 ^ n)%nat) m), (conv_bconv m) in E.
+  lia.
+Qed.
+
+Lemma conv_YF : forall m,
+  (forall j, (j <= m)%nat -> YHCL j) ->
+  (24 * conv YHtot card132 m + wsum (fun k => (2 * k * (k + 1))%nat) m
+   = wsum (fun k => (8 * k * k * (k + 1))%nat) m + 3 * Bconv m)%nat.
+Proof.
+  intros m IH.
+  assert (E : (conv (fun k => (24 * YHtot k)%nat) card132 m
+               + conv (fun k => (2 * k * (k + 1) * card132 k)%nat) card132 m
+               = conv (fun k => (8 * k * k * (k + 1) * card132 k
+                                 + 3 * (k * 4 ^ k))%nat) card132 m)%nat).
+  { rewrite <- (conv_add_l (fun k => (24 * YHtot k)%nat)
+                  (fun k => (2 * k * (k + 1) * card132 k)%nat) card132 m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n Hn. assert (K := IH n Hn). unfold YHCL in K. nia. }
+  rewrite (conv_scal_l 24 YHtot card132 m) in E.
+  rewrite (conv_wsum (fun k => (2 * k * (k + 1))%nat) m) in E.
+  rewrite (conv_add_l (fun k => (8 * k * k * (k + 1) * card132 k)%nat)
+             (fun k => (3 * (k * 4 ^ k))%nat) card132 m) in E.
+  rewrite (conv_wsum (fun k => (8 * k * k * (k + 1))%nat) m) in E.
+  rewrite (conv_scal_l 3 (fun k => (k * 4 ^ k)%nat) card132 m),
+          (conv_bconv m) in E.
+  lia.
+Qed.
+
+Lemma conv_YS : forall m,
+  (2 * conv (fun k => (S k * card132 k)%nat) SStot m
+   + conv (fun k => (k * (k + 1) * card132 k)%nat) (fun n => card132 (S n)) m
+   = m * conv (fun k => (S k * card132 k)%nat)
+               (fun n => card132 (S n)) m)%nat.
+Proof.
+  intro m.
+  assert (E : conv (fun k => (S k * card132 k)%nat)
+                (fun n => (2 * SStot n)%nat) m
+            = conv (fun k => (S k * card132 k)%nat)
+                (fun n => (n * card132 (S n))%nat) m).
+  { apply conv_ext; [intros k _; reflexivity|].
+    intros n _. assert (K := SStot_closed n). lia. }
+  rewrite (conv_scal_r 2 (fun k => (S k * card132 k)%nat) SStot m) in E.
+  rewrite E.
+  unfold conv.
+  rewrite <- (nfold_scal nat m
+    (fun k => (S k * card132 k * card132 (S (m - k)))%nat) (seq 0 (S m))).
+  rewrite <- (fold_add_split nat
+    (fun k => (S k * card132 k * ((m - k) * card132 (S (m - k))))%nat)
+    (fun k => (k * (k + 1) * card132 k * card132 (S (m - k)))%nat)
+    (seq 0 (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+  remember (m - k)%nat as d eqn:Ed.
+  assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring.
+Qed.
+
+Lemma conv_YT : forall m,
+  (2 * conv (fun k => (tri k * card132 k)%nat) (fun n => (n * card132 n)%nat) m
+   = wsum (fun k => (k * (k + 1) * (m - k))%nat) m)%nat.
+Proof.
+  intro m.
+  rewrite (conv_wsum2 (fun k => tri k) (fun n => n) m).
+  rewrite <- (wsum_scal 2 (fun k => (tri k * (m - k))%nat) m).
+  apply wsum_ext. intros k _. assert (Ht := tri_val k). nia.
+Qed.
+
+Lemma wsum_Sw : forall n,
+  wsum S n = (wsum (fun k => k) n + wsum (fun _ => 1%nat) n)%nat.
+Proof.
+  intro n.
+  assert (K := wsum_split3 0 1 1 n).
+  assert (E : wsum (fun k => (0 * (k * k) + 1 * k + 1)%nat) n = wsum S n)
+    by (apply wsum_ext; intros k _; lia).
+  lia.
+Qed.

@@ -1722,3 +1722,10 @@ Compute (map (fun M => ((2 * SStot M)%nat, (M * card132 (S M))%nat))
 Print Assumptions YHw_tail.
 Print Assumptions YHw_midmax.
 Print Assumptions YHtot_expand.
+
+(* ---- the blocks of the position-weighted level sum ---- *)
+Print Assumptions conv_YA.
+Print Assumptions conv_YF.
+Print Assumptions conv_YS.
+Print Assumptions conv_YT.
+Print Assumptions wsum_Sw.
