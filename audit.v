@@ -1577,3 +1577,47 @@ Print Assumptions Btot_closed.
 Compute (map (fun m => (Bwptot m, Awptot m, Ptot m)) (seq 0 6)).
 Compute (map (fun M => ((4 * Btot M)%nat,
                         (4 * M * binomN (2 * M) M + M * 4 ^ M)%nat)) (seq 0 6)).
+
+(* ---- the clipped statistic, transposed ---- *)
+Print Assumptions swap_tri.
+Print Assumptions tri2_val.
+Print Assumptions minsum_val.
+Print Assumptions Cw_Hsq.
+Print Assumptions Ctot_Hsq.
+Print Assumptions seq_split_hi.
+Print Assumptions Hsqsum_hi_block.
+Print Assumptions Hsqsum_lo_block.
+Print Assumptions Hsq_midmax.
+Print Assumptions Hsqtot_expand.
+Print Assumptions Hsqtot_conv.
+Print Assumptions wsum_split4.
+Print Assumptions wsum_kkmk_val.
+Print Assumptions wsum_kmk2_val.
+Print Assumptions wsum_cube_val.
+Print Assumptions conv_shift_sq.
+Print Assumptions conv_V0.
+Print Assumptions conv_HA.
+Print Assumptions conv_HD.
+Print Assumptions conv_HE.
+Print Assumptions conv_HF.
+Print Assumptions Hsqtot_step.
+Print Assumptions Hsqtot_closed.
+Print Assumptions Ctot_closed.
+(* the second moment of H and its closed form *)
+Compute (map (fun M => (Hsqtot M, tri2 M)) (seq 0 6)).
+Compute (map (fun M => ((6 * Hsqtot M + 3 * 4 ^ M + 3 * M * M * card132 M)%nat,
+                        ((2 * M * M * M + 4 * M + 3) * card132 M
+                         + 3 * M * 4 ^ M)%nat)) (seq 0 6)).
+(* the clipped total against its closed form *)
+Compute (map (fun M => ((12 * Ctot M + 8 * M * binomN (2 * M) M
+                         + 6 * binomN (2 * M) M)%nat,
+                        (2 * M * M * binomN (2 * M) M
+                         + (3 * M + 6) * 4 ^ M)%nat)) (seq 0 6)).
+
+(* ---- the d = 3 diagonal, unconditionally ---- *)
+Print Assumptions diagonal_three_closed.
+Print Assumptions DDIAG_THREE_CLOSED.
+(* 6 D(3,M) = (M^2 + 11 M + 21) C(2M,M) + (3M + 15) 4^M *)
+Compute (map (fun M => ((6 * Ddiag 3 M)%nat,
+                        ((M * M + 11 * M + 21) * binomN (2 * M) M
+                         + (3 * M + 15) * 4 ^ M)%nat)) (seq 0 5)).

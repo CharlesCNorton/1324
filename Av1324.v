@@ -19936,3 +19936,895 @@ Proof.
   assert (H3 := Bwptot_closed M).
   lia.
 Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The clipped statistic in closed form, and the d = 3 diagonal. *)
+
+
+(* The clipped statistic, transposed.  Summing over the node to the left first
+   leaves a sum over each node of a quantity depending only on H at that node,
+   so the clipped total reduces to the level sum and the second moment of H. *)
+
+Lemma swap_tri : forall (f : nat -> nat -> nat) M,
+  fold_right (fun y acc =>
+    (fold_right (fun z acc' => (f y z + acc')%nat) 0%nat (seq 1 y) + acc)%nat)
+    0%nat (seq 0 (S M))
+  = fold_right (fun z acc =>
+      (fold_right (fun y acc' => (f y z + acc')%nat) 0%nat (seq z (S M - z))
+       + acc)%nat) 0%nat (seq 1 M).
+Proof.
+  intros f M. induction M as [|M IH]; [reflexivity|].
+  assert (EL : fold_right (fun y acc =>
+      (fold_right (fun z acc' => (f y z + acc')%nat) 0%nat (seq 1 y) + acc)%nat)
+      0%nat (seq 0 (S (S M)))
+    = (fold_right (fun y acc =>
+        (fold_right (fun z acc' => (f y z + acc')%nat) 0%nat (seq 1 y)
+         + acc)%nat) 0%nat (seq 0 (S M))
+       + fold_right (fun z acc' => (f (S M) z + acc')%nat) 0%nat
+                    (seq 1 (S M)))%nat).
+  { rewrite (seq_snoc (S M) 0).
+    rewrite (nfold_app nat (fun y =>
+      fold_right (fun z acc' => (f y z + acc')%nat) 0%nat (seq 1 y))).
+    rewrite (nfold_single nat (fun y =>
+      fold_right (fun z acc' => (f y z + acc')%nat) 0%nat (seq 1 y)) (0 + S M)).
+    cbn beta. replace (0 + S M)%nat with (S M) by lia. reflexivity. }
+  assert (EI : forall z, (1 <= z)%nat -> (z <= M)%nat ->
+      fold_right (fun y acc' => (f y z + acc')%nat) 0%nat
+                 (seq z (S (S M) - z))
+      = (fold_right (fun y acc' => (f y z + acc')%nat) 0%nat (seq z (S M - z))
+         + f (S M) z)%nat).
+  { intros z Hz1 HzM.
+    replace (S (S M) - z)%nat with (S (S M - z)) by lia.
+    rewrite (seq_snoc (S M - z) z).
+    rewrite (nfold_app nat (fun y => f y z)).
+    rewrite (nfold_single nat (fun y => f y z) (z + (S M - z))).
+    cbn beta. replace (z + (S M - z))%nat with (S M) by lia. reflexivity. }
+  assert (ER : fold_right (fun z acc =>
+      (fold_right (fun y acc' => (f y z + acc')%nat) 0%nat
+                  (seq z (S (S M) - z)) + acc)%nat) 0%nat (seq 1 (S M))
+    = (fold_right (fun z acc =>
+        (fold_right (fun y acc' => (f y z + acc')%nat) 0%nat (seq z (S M - z))
+         + acc)%nat) 0%nat (seq 1 M)
+       + fold_right (fun z acc' => (f (S M) z + acc')%nat) 0%nat
+                    (seq 1 (S M)))%nat).
+  { rewrite (seq_snoc M 1) at 1.
+    rewrite (nfold_app nat (fun z =>
+      fold_right (fun y acc' => (f y z + acc')%nat) 0%nat
+                 (seq z (S (S M) - z)))).
+    rewrite (nfold_single nat (fun z =>
+      fold_right (fun y acc' => (f y z + acc')%nat) 0%nat
+                 (seq z (S (S M) - z))) (1 + M)).
+    cbn beta.
+    replace (1 + M)%nat with (S M) by lia.
+    replace (S (S M) - S M)%nat with 1%nat by lia.
+    replace (seq (S M) 1) with ((S M) :: nil) by reflexivity.
+    rewrite (nfold_single nat (fun y => f y (S M)) (S M)).
+    assert (EB : fold_right (fun z acc =>
+        (fold_right (fun y acc' => (f y z + acc')%nat) 0%nat
+                    (seq z (S (S M) - z)) + acc)%nat) 0%nat (seq 1 M)
+      = (fold_right (fun z acc =>
+          (fold_right (fun y acc' => (f y z + acc')%nat) 0%nat (seq z (S M - z))
+           + acc)%nat) 0%nat (seq 1 M)
+         + fold_right (fun z acc => (f (S M) z + acc)%nat) 0%nat (seq 1 M))%nat).
+    { rewrite <- (fold_add_split nat
+        (fun z => fold_right (fun y acc' => (f y z + acc')%nat) 0%nat
+                             (seq z (S M - z)))
+        (fun z => f (S M) z) (seq 1 M)).
+      apply nfold_ext_in. intros z Hz. apply in_seq in Hz. apply EI; lia. }
+    rewrite EB.
+    assert (EC : fold_right (fun z acc' => (f (S M) z + acc')%nat) 0%nat
+                            (seq 1 (S M))
+      = (fold_right (fun z acc => (f (S M) z + acc)%nat) 0%nat (seq 1 M)
+         + f (S M) (S M))%nat).
+    { rewrite (seq_snoc M 1).
+      rewrite (nfold_app nat (fun z => f (S M) z)).
+      rewrite (nfold_single nat (fun z => f (S M) z) (1 + M)).
+      cbn beta. replace (1 + M)%nat with (S M) by lia. reflexivity. }
+    rewrite EC. lia. }
+  rewrite EL, ER, IH. reflexivity.
+Qed.
+
+Definition tri2 (M : nat) : nat :=
+  fold_right (fun z acc => (tri (z - 1) + acc)%nat) 0%nat (seq 1 M).
+
+Lemma tri2_val : forall M, (6 * tri2 M + M = M * M * M)%nat.
+Proof.
+  induction M as [|M IH]; [reflexivity|].
+  assert (E : tri2 (S M) = (tri2 M + tri M)%nat).
+  { unfold tri2 at 1. rewrite (seq_snoc M 1).
+    rewrite (nfold_app nat (fun z => tri (z - 1))).
+    rewrite (nfold_single nat (fun z => tri (z - 1)) (1 + M)).
+    cbn beta. replace (1 + M - 1)%nat with M by lia. reflexivity. }
+  rewrite E. assert (Ht := tri_val M). nia.
+Qed.
+
+Lemma minsum_val : forall z h M, (1 <= z)%nat -> (z <= h)%nat -> (h <= M)%nat ->
+  (fold_right (fun y acc => (Nat.min y h + acc)%nat) 0%nat (seq z (S M - z))
+   + tri (z - 1)
+   = tri h + (M - h) * h)%nat.
+Proof.
+  intros z h M H1 H2 H3.
+  replace (S M - z)%nat with ((S h - z) + (M - h))%nat by lia.
+  rewrite (seq_break (S h - z) (M - h) z).
+  rewrite (nfold_app nat (fun y => Nat.min y h)).
+  replace (z + (S h - z))%nat with (S h) by lia.
+  assert (A : fold_right (fun y acc => (Nat.min y h + acc)%nat) 0%nat
+                         (seq z (S h - z))
+            = fold_right (fun y acc => (y + acc)%nat) 0%nat (seq z (S h - z))).
+  { apply nfold_ext_in. intros y Hy. apply in_seq in Hy. lia. }
+  assert (B : fold_right (fun y acc => (Nat.min y h + acc)%nat) 0%nat
+                         (seq (S h) (M - h))
+            = ((M - h) * h)%nat).
+  { transitivity (fold_right (fun y acc => (h + acc)%nat) 0%nat
+                             (seq (S h) (M - h))).
+    - apply nfold_ext_in. intros y Hy. apply in_seq in Hy. lia.
+    - rewrite (nfold_const nat h (seq (S h) (M - h))), length_seq. lia. }
+  assert (LS : seq 0 (S h) = seq 0 z ++ seq z (S h - z)).
+  { replace (S h) with (z + (S h - z))%nat at 1 by lia.
+    rewrite (seq_break z (S h - z) 0). reflexivity. }
+  assert (C : (fold_right (fun y acc => (y + acc)%nat) 0%nat (seq z (S h - z))
+               + tri (z - 1) = tri h)%nat).
+  { unfold tri. replace (S (z - 1)) with z by lia.
+    rewrite LS. rewrite (nfold_app nat (fun y => y)). lia. }
+  rewrite A, B. lia.
+Qed.
+
+Definition Hsq (u : list nat) (M : nat) : nat :=
+  fold_right (fun z acc => (Hu u M z * Hu u M z + acc)%nat) 0%nat (seq 1 M).
+
+Definition Hsqtot (M : nat) : nat :=
+  fold_right (fun u acc => (Hsq u M + acc)%nat) 0%nat (gen132 M).
+
+Lemma Cw_Hsq : forall u M,
+  (2 * Cw u M + Hsq u M + 2 * tri2 M = (2 * M + 1) * Awp u M)%nat.
+Proof.
+  intros u M.
+  assert (Sw := swap_tri (fun y z => Nat.min y (Hu u M z)) M).
+  cbn beta in Sw.
+  assert (E1 : Cw u M
+    = fold_right (fun z acc =>
+        (fold_right (fun y acc' => (Nat.min y (Hu u M z) + acc')%nat) 0%nat
+                    (seq z (S M - z)) + acc)%nat) 0%nat (seq 1 M)).
+  { unfold Cw, Cin. rewrite <- Sw. reflexivity. }
+  assert (E3 : (Cw u M + tri2 M
+    = fold_right (fun z acc =>
+        (tri (Hu u M z) + (M - Hu u M z) * Hu u M z + acc)%nat) 0%nat
+        (seq 1 M))%nat).
+  { rewrite E1. unfold tri2.
+    rewrite <- (fold_add_split nat
+      (fun z => fold_right (fun y acc' => (Nat.min y (Hu u M z) + acc')%nat)
+                           0%nat (seq z (S M - z)))
+      (fun z => tri (z - 1)) (seq 1 M)).
+    apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    apply minsum_val; [lia | apply Hu_ge; lia | apply Hu_le_cap]. }
+  assert (E4 : (2 * fold_right (fun z acc =>
+      (tri (Hu u M z) + (M - Hu u M z) * Hu u M z + acc)%nat) 0%nat (seq 1 M)
+    + Hsq u M = (2 * M + 1) * Awp u M)%nat).
+  { unfold Hsq, Awp.
+    rewrite <- (nfold_scal nat 2
+      (fun z => (tri (Hu u M z) + (M - Hu u M z) * Hu u M z)%nat) (seq 1 M)).
+    rewrite <- (nfold_scal nat (2 * M + 1) (fun z => Hu u M z) (seq 1 M)).
+    rewrite <- (fold_add_split nat
+      (fun z => (2 * (tri (Hu u M z) + (M - Hu u M z) * Hu u M z))%nat)
+      (fun z => (Hu u M z * Hu u M z)%nat) (seq 1 M)).
+    apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    assert (Hc := Hu_le_cap u M z).
+    assert (Ht := tri_val (Hu u M z)).
+    remember (Hu u M z) as h eqn:Eh.
+    remember (M - h) as d eqn:Ed.
+    assert (EM : M = (h + d)%nat) by lia.
+    rewrite EM. nia. }
+  lia.
+Qed.
+
+Lemma Ctot_Hsq : forall M,
+  (2 * Ctot M + Hsqtot M + 2 * card132 M * tri2 M
+   = (2 * M + 1) * Awptot M)%nat.
+Proof.
+  intro M.
+  assert (E : (2 * Ctot M + Hsqtot M + 2 * card132 M * tri2 M)%nat
+    = fold_right (fun u acc =>
+        (2 * Cw u M + Hsq u M + 2 * tri2 M + acc)%nat) 0%nat (gen132 M)).
+  { rewrite (nfold_three (list nat) (fun u => (2 * Cw u M)%nat)
+               (fun u => Hsq u M) (fun _ : list nat => (2 * tri2 M)%nat)
+               (gen132 M)).
+    cbn beta.
+    rewrite (nfold_scal (list nat) 2 (fun u => Cw u M) (gen132 M)).
+    rewrite (nfold_const (list nat) (2 * tri2 M) (gen132 M)).
+    unfold Ctot, Hsqtot, card132. nia. }
+  rewrite E. unfold Awptot.
+  rewrite <- (nfold_scal (list nat) (2 * M + 1) (fun u => Awp u M) (gen132 M)).
+  apply nfold_ext_in. intros u _. apply Cw_Hsq.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The second moment of H under the max-split. *)
+
+Lemma seq_split_hi : forall al bl,
+  seq 1 (al + S bl) = seq 1 bl ++ seq (S bl) al ++ seq (al + S bl) 1.
+Proof.
+  intros al bl.
+  replace (al + S bl)%nat with (bl + (al + 1))%nat by lia.
+  rewrite (seq_break bl (al + 1) 1).
+  replace (1 + bl)%nat with (S bl) by lia.
+  rewrite (seq_break al 1 (S bl)).
+  replace (S bl + al)%nat with (bl + (al + 1))%nat by lia.
+  reflexivity.
+Qed.
+
+Lemma Hsqsum_hi_block : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  fold_right (fun z acc =>
+    (Hu (midmax a b) (length a + S (length b)) z
+     * Hu (midmax a b) (length a + S (length b)) z + acc)%nat) 0%nat
+    (seq (S (length b)) (length a))
+  = (length a * (length b * length b)
+     + 2 * length b * Awp a (length a) + Hsq a (length a))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  replace (seq (S (length b)) (length a))
+    with (map (fun t => t + length b) (seq 1 (length a)))
+    by (rewrite seq_add_map; reflexivity).
+  rewrite (nfold_map_gen nat nat
+             (fun z => (Hu (midmax a b) (length a + S (length b)) z
+                        * Hu (midmax a b) (length a + S (length b)) z)%nat)
+             (fun t => t + length b) (seq 1 (length a))).
+  cbn beta.
+  transitivity (fold_right (fun t acc =>
+      (length b * length b + 2 * length b * Hu a (length a) t
+       + Hu a (length a) t * Hu a (length a) t + acc)%nat) 0%nat
+      (seq 1 (length a))).
+  - apply nfold_ext_in. intros t Ht. apply in_seq in Ht.
+    rewrite (Hu_midmax_hi a b (t + length b) Hpa Hpb ltac:(lia) ltac:(lia)).
+    replace (t + length b - length b)%nat with t by lia. ring.
+  - rewrite (nfold_three nat (fun _ : nat => (length b * length b)%nat)
+               (fun t => (2 * length b * Hu a (length a) t)%nat)
+               (fun t => (Hu a (length a) t * Hu a (length a) t)%nat)
+               (seq 1 (length a))).
+    cbn beta.
+    rewrite (nfold_const nat (length b * length b) (seq 1 (length a))),
+            length_seq.
+    rewrite (nfold_scal nat (2 * length b) (fun t => Hu a (length a) t)
+               (seq 1 (length a))).
+    unfold Awp, Hsq. lia.
+Qed.
+
+Lemma Hsqsum_lo_block : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  (fold_right (fun z acc =>
+    (Hu (midmax a b) (length a + S (length b)) z
+     * Hu (midmax a b) (length a + S (length b)) z + acc)%nat) 0%nat
+    (seq 1 (length b))
+   + length (safelist b (length b)) * (length b * length b)
+   = Hsq b (length b)
+     + length (safelist b (length b))
+       * ((length a + S (length b)) * (length a + S (length b))))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  assert (E : (fold_right (fun z acc =>
+        (Hu (midmax a b) (length a + S (length b)) z
+         * Hu (midmax a b) (length a + S (length b)) z + acc)%nat) 0%nat
+        (seq 1 (length b))
+      + fold_right (fun z acc =>
+          ((if safeb b z then (length b * length b)%nat else 0) + acc)%nat)
+          0%nat (seq 1 (length b))
+      = fold_right (fun z acc =>
+          (Hu b (length b) z * Hu b (length b) z + acc)%nat) 0%nat
+          (seq 1 (length b))
+        + fold_right (fun z acc =>
+            ((if safeb b z
+              then ((length a + S (length b))
+                    * (length a + S (length b)))%nat
+              else 0) + acc)%nat) 0%nat (seq 1 (length b)))%nat).
+  { rewrite <- (fold_add_split nat
+      (fun z => (Hu (midmax a b) (length a + S (length b)) z
+                 * Hu (midmax a b) (length a + S (length b)) z)%nat)
+      (fun z => if safeb b z then (length b * length b)%nat else 0)
+      (seq 1 (length b))).
+    rewrite <- (fold_add_split nat
+      (fun z => (Hu b (length b) z * Hu b (length b) z)%nat)
+      (fun z => if safeb b z
+                then ((length a + S (length b))
+                      * (length a + S (length b)))%nat
+                else 0) (seq 1 (length b))).
+    apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    destruct (safeb b z) eqn:Es.
+    - assert (Hs : safe_at b z) by (apply safeb_spec; exact Es).
+      rewrite (Hu_midmax_lo_safe a b z ltac:(lia) ltac:(lia) Hs).
+      assert (Eb := proj1 (safe_iff_Hu b z Hpb) Hs). rewrite Eb. ring.
+    - assert (Hns : ~ safe_at b z).
+      { intro C. assert (K : safeb b z = true) by (apply safeb_spec; exact C).
+        rewrite Es in K. discriminate. }
+      rewrite (Hu_midmax_lo_unsafe a b z ltac:(lia) ltac:(lia) Hpb Hns). ring. }
+  rewrite (nfold_filter nat (safeb b)
+             (fun _ : nat => (length b * length b)%nat)
+             (seq 1 (length b))) in E.
+  rewrite (nfold_filter nat (safeb b)
+             (fun _ : nat => ((length a + S (length b))
+                              * (length a + S (length b)))%nat)
+             (seq 1 (length b))) in E.
+  rewrite (nfold_const nat (length b * length b)
+             (filter (safeb b) (seq 1 (length b)))) in E.
+  rewrite (nfold_const nat ((length a + S (length b))
+                            * (length a + S (length b)))
+             (filter (safeb b) (seq 1 (length b)))) in E.
+  change (filter (safeb b) (seq 1 (length b)))
+    with (safelist b (length b)) in E.
+  unfold Hsq. nia.
+Qed.
+
+Theorem Hsq_midmax : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  (Hsq (midmax a b) (length a + S (length b))
+   + length (safelist b (length b)) * (length b * length b)
+   = Hsq b (length b)
+     + length (safelist b (length b))
+       * ((length a + S (length b)) * (length a + S (length b)))
+     + (length a * (length b * length b)
+        + 2 * length b * Awp a (length a) + Hsq a (length a))
+     + (length a + S (length b)) * (length a + S (length b)))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  assert (HL := Hsqsum_lo_block a b Hpa Hpb).
+  assert (HH := Hsqsum_hi_block a b Hpa Hpb).
+  unfold Hsq at 1. rewrite (seq_split_hi (length a) (length b)).
+  rewrite !(nfold_app nat
+    (fun z => (Hu (midmax a b) (length a + S (length b)) z
+               * Hu (midmax a b) (length a + S (length b)) z)%nat)).
+  replace (seq (length a + S (length b)) 1)
+    with ((length a + S (length b)) :: nil) by reflexivity.
+  rewrite (nfold_single nat
+    (fun z => (Hu (midmax a b) (length a + S (length b)) z
+               * Hu (midmax a b) (length a + S (length b)) z)%nat)
+    (length a + S (length b))).
+  cbn beta. rewrite Hu_top. lia.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The level sum of the second moment. *)
+
+Lemma nfold_six : forall (A : Type) (g1 g2 g3 g4 g5 g6 : A -> nat) (l : list A),
+  fold_right (fun x acc =>
+    (g1 x + g2 x + g3 x + g4 x + g5 x + g6 x + acc)%nat) 0%nat l
+  = (fold_right (fun x acc => (g1 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g2 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g3 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g4 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g5 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g6 x + acc)%nat) 0%nat l)%nat.
+Proof.
+  intros A g1 g2 g3 g4 g5 g6. induction l as [|a l IH];
+    cbn [fold_right]; [reflexivity|]. rewrite IH. lia.
+Qed.
+
+Theorem Hsqtot_expand : forall m,
+  (Hsqtot (S m)
+   + fold_right (fun k acc =>
+       (card132 k * ((m - k) * (m - k) * sctot (m - k)) + acc)%nat) 0%nat
+       (seq 0 (S m))
+   = fold_right (fun k acc =>
+       (card132 k * Hsqtot (m - k)
+        + S m * S m * (card132 k * sctot (m - k))
+        + k * card132 k * ((m - k) * (m - k) * card132 (m - k))
+        + 2 * (Awptot k * ((m - k) * card132 (m - k)))
+        + Hsqtot k * card132 (m - k)
+        + S m * S m * (card132 k * card132 (m - k))
+        + acc)%nat) 0%nat (seq 0 (S m)))%nat.
+Proof.
+  intro m. unfold Hsqtot at 1.
+  rewrite (nfold_pairs132 m (fun w => Hsq w (S m))).
+  rewrite <- (fold_add_split nat
+    (fun k => fold_right (fun a acc' =>
+       (fold_right (fun v acc'' => (Hsq (midmax a v) (S m) + acc'')%nat) 0%nat
+                   (gen132 (m - k)) + acc')%nat) 0%nat (gen132 k))
+    (fun k => (card132 k * ((m - k) * (m - k) * sctot (m - k)))%nat)
+    (seq 0 (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk. destruct Hk as [_ Hk].
+  assert (HkM : (k <= m)%nat) by lia.
+  assert (Ecorr : ((m - k) * (m - k) * sctot (m - k))%nat
+    = fold_right (fun v acc =>
+        (length (safelist v (m - k)) * ((m - k) * (m - k)) + acc)%nat) 0%nat
+        (gen132 (m - k))).
+  { transitivity (fold_right (fun v acc =>
+        ((m - k) * (m - k) * length (safelist v (m - k)) + acc)%nat) 0%nat
+        (gen132 (m - k))).
+    - rewrite (nfold_scal (list nat) ((m - k) * (m - k))
+                 (fun v => length (safelist v (m - k))) (gen132 (m - k))).
+      unfold sctot, safelist. reflexivity.
+    - apply nfold_ext_in. intros v _. ring. }
+  assert (INNER : forall a, In a (gen132 k) ->
+    (fold_right (fun v acc => (Hsq (midmax a v) (S m) + acc)%nat) 0%nat
+                (gen132 (m - k))
+     + ((m - k) * (m - k) * sctot (m - k))
+     = Hsqtot (m - k) + S m * S m * sctot (m - k)
+       + card132 (m - k) * (k * ((m - k) * (m - k))
+                            + 2 * (m - k) * Awp a k + Hsq a k)
+       + card132 (m - k) * (S m * S m))%nat).
+  { intros a Ha.
+    assert (Hpa0 : is_perm a k) by (apply gen132_perm; exact Ha).
+    assert (Hla : length a = k) by (apply (perm_len a k); exact Hpa0).
+    assert (Hpa : is_perm a (length a)) by (rewrite Hla; exact Hpa0).
+    rewrite Ecorr.
+    rewrite <- (fold_add_split (list nat) (fun v => Hsq (midmax a v) (S m))
+      (fun v => (length (safelist v (m - k)) * ((m - k) * (m - k)))%nat)
+      (gen132 (m - k))).
+    transitivity (fold_right (fun v acc =>
+        (Hsq v (m - k) + length (safelist v (m - k)) * (S m * S m)
+         + (k * ((m - k) * (m - k)) + 2 * (m - k) * Awp a k + Hsq a k)
+         + (S m * S m) + acc)%nat) 0%nat (gen132 (m - k))).
+    - apply nfold_ext_in. intros v Hv.
+      assert (Hpv0 : is_perm v (m - k)) by (apply gen132_perm; exact Hv).
+      assert (Hlv : length v = (m - k)%nat)
+        by (apply (perm_len v (m - k)); exact Hpv0).
+      assert (Hpv : is_perm v (length v)) by (rewrite Hlv; exact Hpv0).
+      assert (K := Hsq_midmax a v Hpa Hpv).
+      rewrite Hla, Hlv in K.
+      replace (k + S (m - k))%nat with (S m) in K by lia.
+      lia.
+    - rewrite (nfold_four (list nat) (fun v => Hsq v (m - k))
+                 (fun v => (length (safelist v (m - k)) * (S m * S m))%nat)
+                 (fun _ : list nat => (k * ((m - k) * (m - k))
+                                       + 2 * (m - k) * Awp a k + Hsq a k)%nat)
+                 (fun _ : list nat => (S m * S m)%nat) (gen132 (m - k))).
+      cbn beta.
+      transitivity (Hsqtot (m - k)
+        + (S m * S m) * fold_right (fun v acc =>
+             (length (safelist v (m - k)) + acc)%nat) 0%nat (gen132 (m - k))
+        + card132 (m - k) * (k * ((m - k) * (m - k))
+                             + 2 * (m - k) * Awp a k + Hsq a k)
+        + card132 (m - k) * (S m * S m))%nat.
+      + rewrite <- (nfold_scal (list nat) (S m * S m)
+                      (fun v => length (safelist v (m - k))) (gen132 (m - k))).
+        rewrite (nfold_const (list nat) (k * ((m - k) * (m - k))
+                                         + 2 * (m - k) * Awp a k + Hsq a k)
+                   (gen132 (m - k))).
+        rewrite (nfold_const (list nat) (S m * S m) (gen132 (m - k))).
+        unfold Hsqtot, card132.
+        assert (Eq : fold_right (fun v acc =>
+            (length (safelist v (m - k)) * (S m * S m) + acc)%nat) 0%nat
+            (gen132 (m - k))
+          = fold_right (fun v acc =>
+              (S m * S m * length (safelist v (m - k)) + acc)%nat) 0%nat
+              (gen132 (m - k)))
+          by (apply nfold_ext_in; intros v _; ring).
+        rewrite Eq. nia.
+      + unfold sctot, safelist. reflexivity. }
+  transitivity (fold_right (fun a acc =>
+      ((Hsqtot (m - k) + S m * S m * sctot (m - k)
+        + card132 (m - k) * (k * ((m - k) * (m - k)))
+        + card132 (m - k) * (S m * S m))
+       + card132 (m - k) * (2 * (m - k)) * Awp a k
+       + card132 (m - k) * Hsq a k + acc)%nat) 0%nat (gen132 k)).
+  - assert (Ecorr2 : (card132 k * ((m - k) * (m - k) * sctot (m - k)))%nat
+      = fold_right (fun (_ : list nat) (acc : nat) =>
+          ((m - k) * (m - k) * sctot (m - k) + acc)%nat) 0%nat (gen132 k)).
+    { rewrite (nfold_const (list nat)
+                 ((m - k) * (m - k) * sctot (m - k)) (gen132 k)).
+      unfold card132. ring. }
+    rewrite Ecorr2.
+    rewrite <- (fold_add_split (list nat)
+      (fun a : list nat => fold_right (fun v acc =>
+         (Hsq (midmax a v) (S m) + acc)%nat) 0%nat (gen132 (m - k)))
+      (fun _ : list nat => ((m - k) * (m - k) * sctot (m - k))%nat)
+      (gen132 k)).
+    apply nfold_ext_in. intros a Ha.
+    assert (K := INNER a Ha). nia.
+  - rewrite (nfold_three (list nat)
+               (fun _ : list nat =>
+                  (Hsqtot (m - k) + S m * S m * sctot (m - k)
+                   + card132 (m - k) * (k * ((m - k) * (m - k)))
+                   + card132 (m - k) * (S m * S m))%nat)
+               (fun a => (card132 (m - k) * (2 * (m - k)) * Awp a k)%nat)
+               (fun a => (card132 (m - k) * Hsq a k)%nat) (gen132 k)).
+    cbn beta.
+    rewrite (nfold_const (list nat)
+               (Hsqtot (m - k) + S m * S m * sctot (m - k)
+                + card132 (m - k) * (k * ((m - k) * (m - k)))
+                + card132 (m - k) * (S m * S m)) (gen132 k)).
+    rewrite (nfold_scal (list nat) (card132 (m - k) * (2 * (m - k)))
+               (fun a => Awp a k) (gen132 k)).
+    rewrite (nfold_scal (list nat) (card132 (m - k))
+               (fun a => Hsq a k) (gen132 k)).
+    unfold Awptot, Hsqtot, card132. nia.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* Cubic weights against the Catalan convolution. *)
+
+Lemma wsum_split4 : forall a b c d n,
+  wsum (fun k => (a * (k * k * k) + b * (k * k) + c * k + d)%nat) n
+  = (a * wsum (fun k => (k * k * k)%nat) n + b * wsum (fun k => (k * k)%nat) n
+     + c * wsum (fun k => k) n + d * wsum (fun _ => 1%nat) n)%nat.
+Proof.
+  intros a b c d n.
+  rewrite <- (wsum_scal a (fun k => (k * k * k)%nat) n).
+  rewrite <- (wsum_scal b (fun k => (k * k)%nat) n).
+  rewrite <- (wsum_scal c (fun k => k) n).
+  rewrite <- (wsum_scal d (fun _ => 1%nat) n).
+  rewrite (wsum_add (fun k => (a * (k * k * k))%nat)
+             (fun k => (b * (k * k))%nat) n).
+  rewrite (wsum_add (fun k => (a * (k * k * k) + b * (k * k))%nat)
+             (fun k => (c * k)%nat) n).
+  rewrite (wsum_add (fun k => (a * (k * k * k) + b * (k * k) + c * k)%nat)
+             (fun k => (d * 1)%nat) n).
+  apply wsum_ext. intros k _. lia.
+Qed.
+
+Lemma wsum_kkmk_val : forall m,
+  (2 * wsum (fun k => (k * k * (m - k))%nat) m
+   = m * wsum (fun k => (k * (m - k))%nat) m)%nat.
+Proof.
+  intro m.
+  assert (R : wsum (fun k => (k * k * (m - k))%nat) m
+            = wsum (fun k => ((m - k) * (m - k) * k)%nat) m).
+  { rewrite (wsum_rev (fun k => (k * k * (m - k))%nat) m).
+    apply wsum_ext. intros k Hk.
+    replace (m - (m - k))%nat with k by lia. reflexivity. }
+  assert (A : (wsum (fun k => (k * k * (m - k))%nat) m
+               + wsum (fun k => ((m - k) * (m - k) * k)%nat) m)%nat
+            = wsum (fun k => (k * k * (m - k) + (m - k) * (m - k) * k)%nat) m)
+    by apply wsum_add.
+  assert (B : wsum (fun k => (k * k * (m - k) + (m - k) * (m - k) * k)%nat) m
+            = wsum (fun k => (m * (k * (m - k)))%nat) m).
+  { apply wsum_ext. intros k Hk.
+    remember (m - k)%nat as d eqn:Ed.
+    assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring. }
+  rewrite (wsum_scal m (fun k => (k * (m - k))%nat) m) in B. lia.
+Qed.
+
+Lemma wsum_kmk2_val : forall m,
+  (2 * wsum (fun k => (k * ((m - k) * (m - k)))%nat) m
+   = m * wsum (fun k => (k * (m - k))%nat) m)%nat.
+Proof.
+  intro m.
+  assert (E : wsum (fun k => (k * ((m - k) * (m - k)))%nat) m
+            = wsum (fun k => ((m - k) * (m - k) * k)%nat) m)
+    by (apply wsum_ext; intros k _; ring).
+  assert (R : wsum (fun k => (k * k * (m - k))%nat) m
+            = wsum (fun k => ((m - k) * (m - k) * k)%nat) m).
+  { rewrite (wsum_rev (fun k => (k * k * (m - k))%nat) m).
+    apply wsum_ext. intros k Hk.
+    replace (m - (m - k))%nat with k by lia. reflexivity. }
+  assert (K := wsum_kkmk_val m). lia.
+Qed.
+
+Lemma wsum_cube_val : forall m,
+  (2 * wsum (fun k => (k * k * k)%nat) m
+   + 3 * m * wsum (fun k => (k * (m - k))%nat) m
+   = m * m * m * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (R := wsum_rev (fun k => (k * k * k)%nat) m).
+  assert (A : (wsum (fun k => (k * k * k)%nat) m
+               + wsum (fun k => ((m - k) * (m - k) * (m - k))%nat) m)%nat
+            = wsum (fun k => (k * k * k
+                              + (m - k) * (m - k) * (m - k))%nat) m)
+    by apply wsum_add.
+  assert (B : (wsum (fun k => (k * k * k
+                               + (m - k) * (m - k) * (m - k))%nat) m
+               + wsum (fun k => (3 * m * (k * (m - k)))%nat) m)%nat
+            = wsum (fun k => (k * k * k + (m - k) * (m - k) * (m - k)
+                              + 3 * m * (k * (m - k)))%nat) m)
+    by apply wsum_add.
+  assert (Cc : wsum (fun k => (k * k * k + (m - k) * (m - k) * (m - k)
+                               + 3 * m * (k * (m - k)))%nat) m
+             = wsum (fun _ => (m * m * m)%nat) m).
+  { apply wsum_ext. intros k Hk.
+    remember (m - k)%nat as d eqn:Ed.
+    assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring. }
+  rewrite (wsum_const (m * m * m) m) in Cc.
+  rewrite (wsum_scal (3 * m) (fun k => (k * (m - k))%nat) m) in B.
+  lia.
+Qed.
+
+Lemma wsum_3k1mk : forall m,
+  wsum (fun k => ((3 * k + 1) * (m - k))%nat) m
+  = (3 * wsum (fun k => (k * (m - k))%nat) m + wsum (fun k => k) m)%nat.
+Proof.
+  intro m.
+  assert (R : wsum (fun k => k) m = wsum (fun k => (m - k)%nat) m)
+    by apply wsum_rev.
+  rewrite R.
+  rewrite <- (wsum_scal 3 (fun k => (k * (m - k))%nat) m).
+  rewrite (wsum_add (fun k => (3 * (k * (m - k)))%nat)
+             (fun k => (m - k)%nat) m).
+  apply wsum_ext. intros k _. ring.
+Qed.
+
+Lemma wsum_kk1mk : forall m,
+  wsum (fun k => (k * (k + 1) * (m - k))%nat) m
+  = (wsum (fun k => (k * k * (m - k))%nat) m
+     + wsum (fun k => (k * (m - k))%nat) m)%nat.
+Proof.
+  intro m.
+  rewrite (wsum_add (fun k => (k * k * (m - k))%nat)
+             (fun k => (k * (m - k))%nat) m).
+  apply wsum_ext. intros k _. ring.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The blocks the level sum runs into. *)
+
+Lemma conv_sctot_ww : forall f m,
+  (conv f (fun n => (n * n * sctot n)%nat) m
+   + conv f (fun n => (n * n * card132 n)%nat) m
+   = conv f (fun n => (n * n * card132 (S n))%nat) m)%nat.
+Proof.
+  intros f m.
+  rewrite <- (conv_add_r f (fun n => (n * n * sctot n)%nat)
+                (fun n => (n * n * card132 n)%nat) m).
+  apply conv_ext; [intros k _; reflexivity|].
+  intros n _. rewrite (sctot_card n). ring.
+Qed.
+
+Lemma conv_shift_sq : forall m,
+  (conv card132 (fun n => (n * n * card132 (S n))%nat) m
+   + 2 * m * conv (fun k => (k * card132 k)%nat) (fun n => card132 (S n)) m
+   = m * m * conv card132 (fun n => card132 (S n)) m
+     + conv (fun k => (k * k * card132 k)%nat) (fun n => card132 (S n)) m)%nat.
+Proof.
+  intro m. unfold conv.
+  rewrite <- (nfold_scal nat (2 * m)
+    (fun k => (k * card132 k * card132 (S (m - k)))%nat) (seq 0 (S m))).
+  rewrite <- (nfold_scal nat (m * m)
+    (fun k => (card132 k * card132 (S (m - k)))%nat) (seq 0 (S m))).
+  rewrite <- (fold_add_split nat
+    (fun k => (card132 k * ((m - k) * (m - k) * card132 (S (m - k))))%nat)
+    (fun k => (2 * m * (k * card132 k * card132 (S (m - k))))%nat)
+    (seq 0 (S m))).
+  rewrite <- (fold_add_split nat
+    (fun k => (m * m * (card132 k * card132 (S (m - k))))%nat)
+    (fun k => (k * k * card132 k * card132 (S (m - k)))%nat) (seq 0 (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+  remember (m - k)%nat as d eqn:Ed.
+  assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring.
+Qed.
+
+Lemma conv_V0 : forall m,
+  (conv card132 (fun n => card132 (S n)) m + card132 (S m)
+   = card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (H1 := conv_shift1 (fun _ => 1%nat) m). cbn beta in H1.
+  rewrite (wsum_const 1 (S m)) in H1.
+  assert (Hb : conv (fun k => (1 * card132 k)%nat) (fun n => card132 (S n)) m
+             = conv card132 (fun n => card132 (S n)) m)
+    by (apply conv_ext; [intros k _; lia | intros n _; reflexivity]).
+  rewrite Hb in H1. lia.
+Qed.
+
+Definition HSQCL (n : nat) : Prop :=
+  (6 * Hsqtot n + 3 * 4 ^ n + 3 * n * n * card132 n
+   = (2 * n * n * n + 4 * n + 3) * card132 n + 3 * n * 4 ^ n)%nat.
+
+Lemma conv_HA : forall m,
+  (forall j, (j <= m)%nat -> HSQCL j) ->
+  (6 * conv card132 Hsqtot m + 3 * Aconv m + 3 * wsum (fun k => (k * k)%nat) m
+   = wsum (fun k => (2 * k * k * k + 4 * k + 3)%nat) m + 3 * Bconv m)%nat.
+Proof.
+  intros m IH.
+  assert (E : (conv card132 (fun n => (6 * Hsqtot n)%nat) m
+               + conv card132 (fun n => (3 * 4 ^ n
+                                         + 3 * (n * n * card132 n))%nat) m
+               = conv card132 (fun n => ((2 * n * n * n + 4 * n + 3)
+                                         * card132 n + 3 * (n * 4 ^ n))%nat) m)%nat).
+  { rewrite <- (conv_add_r card132 (fun n => (6 * Hsqtot n)%nat)
+                  (fun n => (3 * 4 ^ n + 3 * (n * n * card132 n))%nat) m).
+    apply conv_ext; [intros k _; reflexivity|].
+    intros n Hn. assert (K := IH n Hn). unfold HSQCL in K. nia. }
+  rewrite (conv_scal_r 6 card132 Hsqtot m) in E.
+  rewrite (conv_add_r card132 (fun n => (3 * 4 ^ n)%nat)
+             (fun n => (3 * (n * n * card132 n))%nat) m) in E.
+  rewrite (conv_scal_r 3 card132 (fun n => 4 ^ n) m) in E.
+  rewrite (conv_scal_r 3 card132 (fun n => (n * n * card132 n)%nat) m) in E.
+  rewrite (conv_rev card132 (fun n => 4 ^ n) m), (conv_aconv m) in E.
+  rewrite (conv_catw (fun n => (n * n)%nat) m) in E.
+  rewrite (conv_add_r card132
+             (fun n => ((2 * n * n * n + 4 * n + 3) * card132 n)%nat)
+             (fun n => (3 * (n * 4 ^ n))%nat) m) in E.
+  rewrite (conv_catw (fun n => (2 * n * n * n + 4 * n + 3)%nat) m) in E.
+  rewrite (conv_scal_r 3 card132 (fun n => (n * 4 ^ n)%nat) m) in E.
+  rewrite (conv_rev card132 (fun n => (n * 4 ^ n)%nat) m), (conv_bconv m) in E.
+  lia.
+Qed.
+
+Lemma conv_HF : forall m,
+  (forall j, (j <= m)%nat -> HSQCL j) ->
+  (6 * conv Hsqtot card132 m + 3 * Aconv m + 3 * wsum (fun k => (k * k)%nat) m
+   = wsum (fun k => (2 * k * k * k + 4 * k + 3)%nat) m + 3 * Bconv m)%nat.
+Proof.
+  intros m IH.
+  assert (E : (conv (fun k => (6 * Hsqtot k)%nat) card132 m
+               + conv (fun k => (3 * 4 ^ k
+                                 + 3 * (k * k * card132 k))%nat) card132 m
+               = conv (fun k => ((2 * k * k * k + 4 * k + 3) * card132 k
+                                 + 3 * (k * 4 ^ k))%nat) card132 m)%nat).
+  { rewrite <- (conv_add_l (fun k => (6 * Hsqtot k)%nat)
+                  (fun k => (3 * 4 ^ k + 3 * (k * k * card132 k))%nat)
+                  card132 m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n Hn. assert (K := IH n Hn). unfold HSQCL in K. nia. }
+  rewrite (conv_scal_l 6 Hsqtot card132 m) in E.
+  rewrite (conv_add_l (fun k => (3 * 4 ^ k)%nat)
+             (fun k => (3 * (k * k * card132 k))%nat) card132 m) in E.
+  rewrite (conv_scal_l 3 (fun k => 4 ^ k) card132 m), (conv_aconv m) in E.
+  rewrite (conv_scal_l 3 (fun k => (k * k * card132 k)%nat) card132 m) in E.
+  rewrite (conv_wsum (fun k => (k * k)%nat) m) in E.
+  rewrite (conv_add_l (fun k => ((2 * k * k * k + 4 * k + 3) * card132 k)%nat)
+             (fun k => (3 * (k * 4 ^ k))%nat) card132 m) in E.
+  rewrite (conv_wsum (fun k => (2 * k * k * k + 4 * k + 3)%nat) m) in E.
+  rewrite (conv_scal_l 3 (fun k => (k * 4 ^ k)%nat) card132 m),
+          (conv_bconv m) in E.
+  lia.
+Qed.
+
+Lemma conv_HD : forall m,
+  (2 * conv Awptot (fun n => (n * card132 n)%nat) m
+   + wsum (fun k => ((3 * k + 1) * (m - k))%nat) m + Bconv m
+   = wsum (fun k => (k * (k + 1) * (m - k))%nat) m + m * Aconv m)%nat.
+Proof.
+  intro m.
+  assert (E : (conv (fun k => (2 * Awptot k)%nat)
+                 (fun n => (n * card132 n)%nat) m
+               + conv (fun k => ((3 * k + 1) * card132 k)%nat)
+                   (fun n => (n * card132 n)%nat) m
+               = conv (fun k => (k * (k + 1) * card132 k)%nat)
+                   (fun n => (n * card132 n)%nat) m
+                 + conv (fun k => 4 ^ k)
+                     (fun n => (n * card132 n)%nat) m)%nat).
+  { rewrite <- (conv_add_l (fun k => (2 * Awptot k)%nat)
+                  (fun k => ((3 * k + 1) * card132 k)%nat)
+                  (fun n => (n * card132 n)%nat) m).
+    rewrite <- (conv_add_l (fun k => (k * (k + 1) * card132 k)%nat)
+                  (fun k => 4 ^ k) (fun n => (n * card132 n)%nat) m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n _. assert (K := Awptot_closed n).
+    rewrite <- (card132_binom n) in K. nia. }
+  rewrite (conv_scal_l 2 Awptot (fun n => (n * card132 n)%nat) m) in E.
+  rewrite (conv_wsum2 (fun k => (3 * k + 1)%nat) (fun n => n) m) in E.
+  rewrite (conv_wsum2 (fun k => (k * (k + 1))%nat) (fun n => n) m) in E.
+  assert (R := conv_rbconv m). lia.
+Qed.
+
+Lemma conv_HE : forall m,
+  (conv card132 (fun n => (n * n * sctot n)%nat) m
+   + wsum (fun k => (k * k)%nat) m
+   + 2 * m * conv (fun k => (k * card132 k)%nat) (fun n => card132 (S n)) m
+   = m * m * conv card132 (fun n => card132 (S n)) m
+     + conv (fun k => (k * k * card132 k)%nat) (fun n => card132 (S n)) m)%nat.
+Proof.
+  intro m.
+  assert (E := conv_sctot_ww card132 m).
+  rewrite (conv_catw (fun n => (n * n)%nat) m) in E.
+  assert (K := conv_shift_sq m). lia.
+Qed.
+
+Theorem Hsqtot_conv : forall m,
+  (Hsqtot (S m) + conv card132 (fun n => (n * n * sctot n)%nat) m
+   = conv card132 Hsqtot m
+     + S m * S m * conv card132 sctot m
+     + conv (fun k => (k * card132 k)%nat) (fun n => (n * n * card132 n)%nat) m
+     + 2 * conv Awptot (fun n => (n * card132 n)%nat) m
+     + conv Hsqtot card132 m
+     + S m * S m * conv card132 card132 m)%nat.
+Proof.
+  intro m.
+  assert (E := Hsqtot_expand m).
+  assert (R : (conv card132 Hsqtot m
+               + S m * S m * conv card132 sctot m
+               + conv (fun k => (k * card132 k)%nat)
+                   (fun n => (n * n * card132 n)%nat) m
+               + 2 * conv Awptot (fun n => (n * card132 n)%nat) m
+               + conv Hsqtot card132 m
+               + S m * S m * conv card132 card132 m)%nat
+    = fold_right (fun k acc =>
+       (card132 k * Hsqtot (m - k)
+        + S m * S m * (card132 k * sctot (m - k))
+        + k * card132 k * ((m - k) * (m - k) * card132 (m - k))
+        + 2 * (Awptot k * ((m - k) * card132 (m - k)))
+        + Hsqtot k * card132 (m - k)
+        + S m * S m * (card132 k * card132 (m - k))
+        + acc)%nat) 0%nat (seq 0 (S m))).
+  { rewrite <- (conv_scal_l (S m * S m) card132 sctot m).
+    rewrite <- (conv_scal_l 2 Awptot (fun n => (n * card132 n)%nat) m).
+    rewrite <- (conv_scal_l (S m * S m) card132 card132 m).
+    unfold conv. cbn beta.
+    rewrite <- (nfold_six nat
+      (fun k => (card132 k * Hsqtot (m - k))%nat)
+      (fun k => (S m * S m * card132 k * sctot (m - k))%nat)
+      (fun k => (k * card132 k * ((m - k) * (m - k) * card132 (m - k)))%nat)
+      (fun k => (2 * Awptot k * ((m - k) * card132 (m - k)))%nat)
+      (fun k => (Hsqtot k * card132 (m - k))%nat)
+      (fun k => (S m * S m * card132 k * card132 (m - k))%nat)
+      (seq 0 (S m))).
+    apply nfold_ext_in. intros k _. cbn beta. ring. }
+  assert (L : conv card132 (fun n => (n * n * sctot n)%nat) m
+    = fold_right (fun k acc =>
+        (card132 k * ((m - k) * (m - k) * sctot (m - k)) + acc)%nat) 0%nat
+        (seq 0 (S m))) by reflexivity.
+  lia.
+Qed.
+
+Lemma Hsqtot_step : forall m,
+  (forall j, (j <= m)%nat -> HSQCL j) -> HSQCL (S m).
+Proof.
+  intros m IH. unfold HSQCL.
+  assert (HC := Hsqtot_conv m).
+  assert (HA := conv_HA m IH).
+  assert (HF := conv_HF m IH).
+  assert (HB := conv_SC2 m).
+  assert (HBm := f_equal (Nat.mul m) HB).
+  assert (HBm2 := f_equal (Nat.mul (m * m)) HB).
+  assert (HCc := conv_wsum2 (fun k => k) (fun n => (n * n)%nat) m).
+  assert (HD := conv_HD m).
+  assert (HE := conv_HE m).
+  assert (HG := conv_cat m).
+  assert (HGm := f_equal (Nat.mul m) HG).
+  assert (HGm2 := f_equal (Nat.mul (m * m)) HG).
+  assert (V0 := conv_V0 m).
+  assert (V0m2 := f_equal (Nat.mul (m * m)) V0).
+  assert (V1 := conv_shift1 (fun k => k) m).
+  assert (V2 := conv_shift1 (fun k => (k * k)%nat) m).
+  cbn beta in V1, V2.
+  assert (V1m := f_equal (Nat.mul m) V1).
+  rewrite (wsum_3k1mk m), (wsum_kk1mk m) in HD.
+  assert (Q1 := wsum_split4 2 0 4 3 m).
+  assert (Qe : wsum (fun k => (2 * (k * k * k) + 0 * (k * k) + 4 * k + 3)%nat) m
+             = wsum (fun k => (2 * k * k * k + 4 * k + 3)%nat) m)
+    by (apply wsum_ext; intros k _; lia).
+  assert (W1 := wsum_const 1 m).
+  assert (W2 := wsum_const 1 (S m)).
+  assert (W3 := wsum_id_val m).
+  assert (W4 := wsum_id_val (S m)).
+  assert (W4m := f_equal (Nat.mul m) W4).
+  assert (W5 := wsum_sq_val m).
+  assert (W6 := wsum_sq_val (S m)).
+  assert (W7 := wsum_kmk_val m).
+  assert (W8 := wsum_cube_val m).
+  assert (W9 := wsum_kkmk_val m).
+  assert (W10 := wsum_kmk2_val m).
+  assert (R2 := card132_ratio (S m)).
+  assert (R2m := f_equal (Nat.mul m) R2).
+  assert (R2m2 := f_equal (Nat.mul (m * m)) R2).
+  assert (P1 := Aconv_closed m).
+  assert (P1m := f_equal (Nat.mul m) P1).
+  assert (P3 := Bconv_val m).
+  assert (P4 := cbi_ratio m).
+  assert (B1 := card132_binom (S m)).
+  assert (B1m := f_equal (Nat.mul m) B1).
+  unfold cb in P3, P4.
+  replace (4 ^ S m)%nat with (4 * 4 ^ m)%nat in * by (cbn [Nat.pow]; ring).
+  lia.
+Qed.
+
+Theorem Hsqtot_closed_upto : forall N m, (m <= N)%nat -> HSQCL m.
+Proof.
+  induction N as [|N IHN]; intros m Hm.
+  - assert (E : m = 0%nat) by lia. subst m. unfold HSQCL.
+    vm_compute. reflexivity.
+  - destruct (le_lt_dec m N) as [H|H]; [apply IHN; exact H|].
+    assert (EM : m = S N) by lia. subst m.
+    apply Hsqtot_step. intros j Hj. apply IHN. lia.
+Qed.
+
+Theorem Hsqtot_closed : forall m, HSQCL m.
+Proof. intro m. apply (Hsqtot_closed_upto m m). lia. Qed.
+
+Theorem Ctot_closed : CTOT_CLOSED.
+Proof.
+  intro M.
+  assert (H1 := Ctot_Hsq M).
+  assert (H2 := Hsqtot_closed M). unfold HSQCL in H2.
+  assert (H3 := tri2_val M).
+  assert (H3c := f_equal (Nat.mul (card132 M)) H3).
+  assert (H4 := Awptot_closed M).
+  assert (H4m := f_equal (Nat.mul M) H4).
+  assert (H5 := card132_binom M).
+  assert (H5m := f_equal (Nat.mul M) H5).
+  assert (H5m2 := f_equal (Nat.mul (M * M)) H5).
+  lia.
+Qed.
+
+Definition diagonal_three_closed : Diagonal 3 :=
+  diagonal_three_of_stats Btot_closed Ctot_closed.
+
