@@ -1858,3 +1858,9 @@ Print Assumptions conv_a2.
 Print Assumptions conv_BB1.
 Print Assumptions conv_BB12.
 Print Assumptions conv_Bwptot_shift.
+
+(* ---- the remaining blocks of the second-order level sum ---- *)
+Print Assumptions conv_BB9_val.
+Print Assumptions conv_BB7.
+Print Assumptions conv_BB3.
+Print Assumptions conv_BB8.

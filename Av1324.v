@@ -24021,3 +24021,66 @@ Proof.
   assert (S2 := conv_shift1 (fun k => (k * S k)%nat) m). cbn beta in S2.
   lia.
 Qed.
+
+(* The remaining blocks of the second-order level sum. *)
+
+
+Lemma conv_BB9_val : forall m,
+  (4 * conv Bwptot sctot m
+   + 2 * (S (S m) * S (S m) * card132 (S m))
+   + S m * 4 ^ (S m)
+   + 2 * Aconv (S m)
+   + 2 * wsum (fun k => (S k * S k)%nat) m
+   + Bconv m
+   = 2 * wsum (fun k => (S k * S k)%nat) (S m)
+     + Bconv (S m) + 2 * 4 ^ (S m) + 2 * Aconv m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_sctot Bwptot m).
+  assert (B := conv_Bwptot_shift m).
+  assert (C := conv_SF m (fun j _ => Bwptot_closed j)).
+  rewrite (conv_scal_l 4 Bwptot card132 m) in C.
+  assert (D := f_equal (Nat.mul 4) A).
+  lia.
+Qed.
+
+Lemma conv_BB7 : forall m,
+  (2 * conv Awptot Ptot m
+   + conv (fun k => ((3 * k + 1) * card132 k)%nat) Ptot m
+   = conv (fun k => (k * (k + 1) * card132 k)%nat) Ptot m
+     + conv (fun k => 4 ^ k) Ptot m)%nat.
+Proof.
+  intro m.
+  assert (E : (conv (fun k => (2 * Awptot k)%nat) Ptot m
+               + conv (fun k => ((3 * k + 1) * card132 k)%nat) Ptot m
+               = conv (fun k => (k * (k + 1) * card132 k + 4 ^ k)%nat)
+                   Ptot m)%nat).
+  { rewrite <- (conv_add_l (fun k => (2 * Awptot k)%nat)
+                  (fun k => ((3 * k + 1) * card132 k)%nat) Ptot m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n _. assert (K := Awptot_closed n).
+    rewrite <- (card132_binom n) in K. nia. }
+  rewrite (conv_scal_l 2 Awptot Ptot m) in E.
+  rewrite (conv_add_l (fun k => (k * (k + 1) * card132 k)%nat)
+             (fun k => 4 ^ k) Ptot m) in E.
+  lia.
+Qed.
+
+Lemma conv_BB3 : forall m,
+  (conv (fun k => (k * card132 k)%nat) (fun n => (n * Ptot n)%nat) m
+   + conv (fun k => (k * k * card132 k)%nat) Ptot m
+   = m * conv (fun k => (k * card132 k)%nat) Ptot m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_beta (fun k => (k * card132 k)%nat) Ptot m).
+  assert (E : conv (fun k => (k * (k * card132 k))%nat) Ptot m
+            = conv (fun k => (k * k * card132 k)%nat) Ptot m)
+    by (apply conv_ext; [intros j _; ring | intros n _; reflexivity]).
+  lia.
+Qed.
+
+Lemma conv_BB8 : forall m,
+  (conv Ltot (fun n => (n * sctot n)%nat) m
+   + conv (fun k => (k * Ltot k)%nat) sctot m
+   = m * conv Ltot sctot m)%nat.
+Proof. intro m. apply (conv_beta Ltot sctot m). Qed.
