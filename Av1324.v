@@ -21046,3 +21046,145 @@ Proof.
   rewrite (esum_rec (fun k => (k * k)%nat) n). cbn beta.
   assert (R := cbi_ratio n). nia.
 Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The two- and three-letter extension counts at a general state. *)
+
+
+(* The two-letter extension count at a general state.  The cap enters every
+   term through a minimum, and laminarity collapses the nested minima exactly
+   as in the 132-free case. *)
+
+Theorem extend_two_at_state : forall v n z,
+  is_perm v n -> ~ contains_1324 v -> z <= Mu v n ->
+  length (extend (ext v z) (S n) 2)
+  = (3 + Nat.min (Mu v n) (Hu v n z)
+     + fold_right (fun t acc => (2 + Nat.min z (Hu v n t) + acc)%nat) 0%nat
+                  (seq 1 z)
+     + fold_right (fun s acc => (3 + Nat.min (Mu v n) (Hu v n s) + acc)%nat)
+                  0%nat
+                  (seq z (S (Nat.min (Mu v n) (Hu v n z) - z))))%nat.
+Proof.
+  intros v n z Hp Hav Hzm.
+  assert (HM := Mu_le_cap v n).
+  assert (Hzn : z <= n) by lia.
+  assert (Hlv : length v = n) by (apply (perm_len v n); exact Hp).
+  assert (Hgz : z <= Hu v n z) by (apply Hu_ge; exact Hzn).
+  assert (Hcz := Hu_le_cap v n z).
+  assert (Hzh : z <= Nat.min (Mu v n) (Hu v n z)) by lia.
+  assert (Hhn : Nat.min (Mu v n) (Hu v n z) <= n) by lia.
+  assert (Hpe : is_perm (ext v z) (S n)) by (apply ext_perm; assumption).
+  assert (Hae : ~ contains_1324 (ext v z))
+    by (apply (ext_avoids v n z Hav Hzm Hzn)).
+  rewrite (extend_two_state (ext v z) (S n) Hpe Hae).
+  rewrite (Mu_ext v z n Hp Hzn).
+  assert (Eb : bump z (Nat.min (Mu v n) (Hu v n z))
+             = S (Nat.min (Mu v n) (Hu v n z)))
+    by (unfold bump; destruct (Nat.leb_spec z (Nat.min (Mu v n) (Hu v n z)));
+        lia).
+  rewrite Eb.
+  rewrite (seq_split_d3 z (Nat.min (Mu v n) (Hu v n z)) Hzh).
+  rewrite !(nfold_app nat (fun t =>
+    S (S (Nat.min (S (Nat.min (Mu v n) (Hu v n z)))
+                  (Hu (ext v z) (S n) t))))).
+  assert (P1 : fold_right (fun t acc =>
+      (S (S (Nat.min (S (Nat.min (Mu v n) (Hu v n z)))
+                     (Hu (ext v z) (S n) t))) + acc)%nat) 0%nat (seq 0 1)
+    = (3 + Nat.min (Mu v n) (Hu v n z))%nat).
+  { cbn [seq fold_right].
+    rewrite (Hu_ext_zero_M v n z Hlv).
+    rewrite (Nat.min_l (S (Nat.min (Mu v n) (Hu v n z))) (S n) ltac:(lia)).
+    lia. }
+  assert (P2 : fold_right (fun t acc =>
+      (S (S (Nat.min (S (Nat.min (Mu v n) (Hu v n z)))
+                     (Hu (ext v z) (S n) t))) + acc)%nat) 0%nat (seq 1 z)
+    = fold_right (fun t acc => (2 + Nat.min z (Hu v n t) + acc)%nat) 0%nat
+                 (seq 1 z)).
+  { apply nfold_ext_in. intros t Ht. apply in_seq in Ht.
+    assert (Ht1 : 1 <= t) by lia.
+    assert (Htz : t <= z) by lia.
+    rewrite (Hu_ext_lo_M v n z t Hlv Hp Hzn Ht1 Htz).
+    assert (K : Nat.min z (Hu v n t) <= z) by lia.
+    rewrite (Nat.min_r (S (Nat.min (Mu v n) (Hu v n z)))
+               (Nat.min z (Hu v n t)) ltac:(lia)).
+    lia. }
+  assert (P3 : fold_right (fun t acc =>
+      (S (S (Nat.min (S (Nat.min (Mu v n) (Hu v n z)))
+                     (Hu (ext v z) (S n) t))) + acc)%nat) 0%nat
+      (seq (S z) (S (Nat.min (Mu v n) (Hu v n z)) - z))
+    = fold_right (fun s acc => (3 + Nat.min (Mu v n) (Hu v n s) + acc)%nat)
+                 0%nat (seq z (S (Nat.min (Mu v n) (Hu v n z) - z)))).
+  { replace (S (Nat.min (Mu v n) (Hu v n z)) - z)%nat
+      with (S (Nat.min (Mu v n) (Hu v n z) - z)) by lia.
+    rewrite <- (seq_shift (S (Nat.min (Mu v n) (Hu v n z) - z)) z).
+    rewrite (nfold_map_gen nat nat
+      (fun t => S (S (Nat.min (S (Nat.min (Mu v n) (Hu v n z)))
+                              (Hu (ext v z) (S n) t)))) S
+      (seq z (S (Nat.min (Mu v n) (Hu v n z) - z)))).
+    cbn beta.
+    apply nfold_ext_in. intros s Hs. apply in_seq in Hs.
+    assert (Hzs : z <= s) by lia.
+    assert (Hsh : s <= Nat.min (Mu v n) (Hu v n z)) by lia.
+    assert (Hsn : S s <= S n) by lia.
+    rewrite (Hu_ext_hi_M v n z (S s) Hlv Hzn ltac:(lia) Hsn).
+    replace (S s - 1)%nat with s by lia.
+    assert (Hgs : s <= Hu v n s) by (apply Hu_ge; lia).
+    assert (Elam : Hu v n s <= Hu v n z)
+      by (apply (Hu_laminar v n z s); lia).
+    assert (Eb2 : bump z (Hu v n s) = S (Hu v n s))
+      by (unfold bump; destruct (Nat.leb_spec z (Hu v n s)); lia).
+    rewrite Eb2. lia. }
+  rewrite P1, P2, P3. lia.
+Qed.
+
+Theorem extend_three_state : forall v n, is_perm v n -> ~ contains_1324 v ->
+  length (extend v n 3)
+  = fold_right (fun z acc =>
+      (3 + Nat.min (Mu v n) (Hu v n z)
+       + fold_right (fun t acc' => (2 + Nat.min z (Hu v n t) + acc')%nat)
+                    0%nat (seq 1 z)
+       + fold_right (fun s acc' =>
+           (3 + Nat.min (Mu v n) (Hu v n s) + acc')%nat) 0%nat
+           (seq z (S (Nat.min (Mu v n) (Hu v n z) - z)))
+       + acc)%nat) 0%nat (seq 0 (S (Mu v n))).
+Proof.
+  intros v n Hp Hav.
+  change 3 with (S 2).
+  rewrite (extend_front v n 2), length_flat_map_gen,
+          (extend_one_state v n Hav).
+  rewrite (nfold_map_gen nat (list nat)
+             (fun w => length (extend w (S n) 2)) (ext v) (seq 0 (S (Mu v n)))).
+  apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+  apply extend_two_at_state; [exact Hp | exact Hav | lia].
+Qed.
+
+(* the 132-free case is the specialisation with no cap *)
+Corollary extend_three_free : forall M u, In u (gen132 M) ->
+  length (extend u M 3)
+  = fold_right (fun z acc =>
+      (3 + Hu u M z
+       + fold_right (fun t acc' => (2 + Nat.min z (Hu u M t) + acc')%nat)
+                    0%nat (seq 1 z)
+       + fold_right (fun s acc' => (3 + Hu u M s + acc')%nat) 0%nat
+                    (seq z (S (Hu u M z - z)))
+       + acc)%nat) 0%nat (seq 0 (S M)).
+Proof.
+  intros M u Hin.
+  assert (Hp : is_perm u M) by (apply gen132_perm; exact Hin).
+  assert (H132 : ~ contains_132 u) by (exact (gen132_av M u Hin)).
+  assert (Hav : ~ contains_1324 u)
+    by (intro C; apply H132; apply sub_1324_132; exact C).
+  assert (HMu : Mu u M = M) by (apply Mu_free; exact H132).
+  rewrite (extend_three_state u M Hp Hav), HMu.
+  apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+  assert (Hc := Hu_le_cap u M z).
+  rewrite (Nat.min_r M (Hu u M z) Hc).
+  assert (E : fold_right (fun s acc => (3 + Nat.min M (Hu u M s) + acc)%nat)
+                0%nat (seq z (S (Hu u M z - z)))
+            = fold_right (fun s acc => (3 + Hu u M s + acc)%nat) 0%nat
+                (seq z (S (Hu u M z - z)))).
+  { apply nfold_ext_in. intros s _.
+    assert (Hcs := Hu_le_cap u M s). rewrite (Nat.min_r M (Hu u M s) Hcs).
+    reflexivity. }
+  rewrite E. reflexivity.
+Qed.

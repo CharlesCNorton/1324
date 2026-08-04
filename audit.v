@@ -1645,3 +1645,12 @@ Print Assumptions bsum_cube_val.
 Print Assumptions bsum_kkmk_val.
 Print Assumptions bsum_kmkmk_val.
 Print Assumptions esum_sq_val.
+
+(* ---- the extension count at a general state ---- *)
+Print Assumptions extend_two_at_state.
+Print Assumptions extend_three_state.
+Print Assumptions extend_three_free.
+(* the three-letter count summed over the class is the d = 3 diagonal *)
+Compute (map (fun M => (fold_right (fun u acc =>
+                          (length (extend u M 3) + acc)%nat) 0%nat (gen132f M),
+                        Ddiag 3 M)) (seq 0 4)).
