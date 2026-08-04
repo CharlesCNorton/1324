@@ -1273,3 +1273,95 @@ Compute (map (fun M => ((4 * M + 1) * (binomN (2 * M) M * binomN (2 * M) M),
              (seq 0 4)).
 (* the top nonzero index of a coefficient list *)
 Compute (nzlen (dpfib 2 P2), nzlen (dqfib 2 Q2), nzlen (dqfib 1 Q1)).
+
+(* ---- the state function characterised, and evaluated at a max-split ---- *)
+Print Assumptions foldmin_le_cap.
+Print Assumptions foldmin_le_in.
+Print Assumptions foldmin_wit.
+Print Assumptions Hu_le_cap.
+Print Assumptions Hu_le_in.
+Print Assumptions Hu_wit.
+Print Assumptions Hu_char.
+Print Assumptions Hu_same_members.
+Print Assumptions hvals_ge.
+Print Assumptions Hu_ge.
+Print Assumptions hvals_zero_empty.
+Print Assumptions Hu_zero.
+Print Assumptions Hu_top.
+Print Assumptions hvals_empty_safe.
+Print Assumptions Hu_safe.
+Print Assumptions hvals_midmax_lo.
+Print Assumptions hvals_midmax_hi.
+Print Assumptions unsafe_hvals_member.
+Print Assumptions safe_at_zero.
+Print Assumptions Hu_midmax_lo_safe.
+Print Assumptions Hu_midmax_lo_unsafe.
+Print Assumptions Hu_midmax_hi.
+
+(* ---- the level sum and the recursion the max-split carries ---- *)
+Print Assumptions nfold_app.
+Print Assumptions nfold_scal.
+Print Assumptions seq_break.
+Print Assumptions seq_add_map.
+Print Assumptions seq_split_three.
+Print Assumptions Lsum_split.
+Print Assumptions Lsum_tail.
+Print Assumptions safecount_head.
+Print Assumptions Lsum_midmax.
+(* the recursion at a small split: L(midmax a b) against its four parts *)
+Compute (let a := (1 :: 0 :: nil) in let b := (0 :: 1 :: nil) in
+         ((Lsum (midmax a b) (length a + S (length b)) + (length a + 1))%nat,
+          (1 + Lsum a (length a) + Lsum b (length b)
+           + (length a + 1) * safecount b (length b))%nat)).
+
+(* ---- the level sum over the class, and its closed form ---- *)
+Print Assumptions nfold_flat_map.
+Print Assumptions nfold_const.
+Print Assumptions nfold_three.
+Print Assumptions nfold_single.
+Print Assumptions nfold_four.
+Print Assumptions nfold_cons.
+Print Assumptions nfold_seq_snoc.
+Print Assumptions gen132_pairs132_perm.
+Print Assumptions nfold_pairs132.
+Print Assumptions sctot_card.
+Print Assumptions Ltot_expand.
+Print Assumptions Aconv_rec.
+Print Assumptions Aconv_closed.
+Print Assumptions conv_weight.
+Print Assumptions conv_weight_rev.
+Print Assumptions conv_pow_rev.
+Print Assumptions conv_shift.
+Print Assumptions Ltot_step.
+Print Assumptions Ltot_closed_upto.
+Print Assumptions Ltot_closed.
+(* the level sum against (4^M - C(2M,M))/2 *)
+Compute (map (fun M => (Ltot M, ((4 ^ M - binomN (2 * M) M) / 2)%nat))
+             (seq 0 5)).
+(* and its recursion L(M+1) = 4 L(M) + Cat(M) *)
+Compute (map (fun M => (Ltot (S M), (4 * Ltot M + card132f M)%nat)) (seq 0 4)).
+(* the 4-against-Catalan convolution, against (4^(M+1) - C(2M+2,M+1))/2 *)
+Compute (map (fun M => (Aconv M,
+                        ((4 ^ S M - binomN (2 * S M) (S M)) / 2)%nat))
+             (seq 0 5)).
+
+(* ---- the d = 2 diagonal, closed ---- *)
+Print Assumptions tri_val.
+Print Assumptions binom_tri.
+Print Assumptions Hu_split.
+Print Assumptions level_sum_word.
+Print Assumptions Ddiag_two_L.
+Print Assumptions nsig_two_closed.
+Print Assumptions diagonal_two_closed.
+Print Assumptions Ddiag_two_val.
+Print Assumptions nsig_two_rec.
+Print Assumptions p_lead_two_all.
+Print Assumptions R_at_minus_one_two_all.
+Print Assumptions exponent_law_at_zero_two_all.
+(* N_01(M) = (C(2M,M) + 4^M)/2, and 2 D(2,M) = (M+3) C(2M,M) + 4^M *)
+Compute (map (fun M => (Nsigf 2 M [0; 1],
+                        ((binomN (2 * M) M + 4 ^ M) / 2)%nat)) (seq 0 5)).
+Compute (map (fun M => ((2 * Ddiagf 2 M)%nat,
+                        ((M + 3) * binomN (2 * M) M + 4 ^ M)%nat)) (seq 0 5)).
+(* the coefficient lists the closed d = 2 diagonal carries *)
+Compute (dp 2 diagonal_two_closed, dq 2 diagonal_two_closed).
