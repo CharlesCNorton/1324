@@ -1789,3 +1789,8 @@ Compute (let a := (1 :: 0 :: nil) in let b := (0 :: 2 :: 1 :: nil) in
            + length b * (GGwp a (length a) + Lsum a (length a))
            + BBwp a (length a)
            + (length a + S (length b)))%nat)).
+
+(* ---- ordered triples of safe values ---- *)
+Print Assumptions cntge_filter_ge.
+Print Assumptions cnt2ge_pairge.
+Print Assumptions cnt2ge_val.

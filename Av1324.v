@@ -23208,3 +23208,49 @@ Proof.
   rewrite (BBin_top (midmax a b) (length a + S (length b))), Etop.
   rewrite Plo, Phi. lia.
 Qed.
+
+(* Ordered triples of safe values. *)
+
+
+(* Ordered triples of safe values.  The inner sum over a tail is the ordered
+   pair count of that tail, so the triple count is the next factorial moment. *)
+
+Definition cnt2ge (L : list nat) (y : nat) : nat :=
+  fold_right (fun v acc =>
+    ((if Nat.leb y v then cntge L v else 0) + acc)%nat) 0%nat L.
+
+Definition tripge (L : list nat) : nat :=
+  fold_right (fun y acc => (cnt2ge L y + acc)%nat) 0%nat L.
+
+Lemma cntge_filter_ge : forall L x v, x <= v ->
+  cntge (filter (fun z => Nat.leb x z) L) v = cntge L v.
+Proof.
+  intros L x v Hxv. unfold cntge.
+  rewrite (filter_filter nat (fun z => Nat.leb x z)
+             (fun z => Nat.leb v z) L).
+  f_equal. apply filter_ext_gen. intro z.
+  destruct (Nat.leb_spec v z) as [Hv|Hv];
+    destruct (Nat.leb_spec x z) as [Hx|Hx]; cbn [andb];
+    try reflexivity; lia.
+Qed.
+
+Lemma cnt2ge_pairge : forall L x,
+  cnt2ge L x = pairge (filter (fun z => Nat.leb x z) L).
+Proof.
+  intros L x. unfold cnt2ge, pairge.
+  rewrite (nfold_filter nat (fun z => Nat.leb x z) (fun v => cntge L v) L).
+  apply nfold_ext_in. intros v Hv.
+  apply filter_In in Hv. destruct Hv as [_ Hle].
+  apply Nat.leb_le in Hle.
+  symmetry. apply (cntge_filter_ge L x v Hle).
+Qed.
+
+Lemma cnt2ge_val : forall L x, NoDup L ->
+  (2 * cnt2ge L x = cntge L x * (cntge L x + 1))%nat.
+Proof.
+  intros L x Hnd.
+  rewrite (cnt2ge_pairge L x).
+  rewrite (pairge_val (filter (fun z => Nat.leb x z) L)
+             (NoDup_filter (fun z => Nat.leb x z) Hnd)).
+  unfold cntge. lia.
+Qed.
