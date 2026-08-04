@@ -1467,3 +1467,14 @@ Compute (map (fun M => ((12 * Ctot M + 8 * M * binomN (2 * M) M
                          + 6 * binomN (2 * M) M)%nat,
                         (2 * M * M * binomN (2 * M) M
                          + (3 * M + 6) * 4 ^ M)%nat)) (seq 0 6)).
+
+(* ---- the second moment of the split count ---- *)
+Print Assumptions seq2_sum.
+Print Assumptions scsq_closed.
+Print Assumptions scpair_closed.
+Compute (map (fun m => (scsq m,
+                        (2 * card132f (S (S m)) - 3 * card132f (S m))%nat))
+             (seq 0 6)).
+Compute (map (fun m => (scpair m,
+                        (2 * card132f (S (S m)) - 4 * card132f (S m))%nat))
+             (seq 0 6)).

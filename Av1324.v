@@ -18382,3 +18382,88 @@ Qed.
 
 Definition diagonal_three_of_stats (HB : BTOT_CLOSED) (HC : CTOT_CLOSED)
   : Diagonal 3 := diagonal_three (three_of_stats HB HC).
+
+(* ------------------------------------------------------------------ *)
+(* The second moment of the split count.  A 132-avoider with s split points
+   has children carrying 2, 3, ..., s+1 split points, one each, so summing the
+   child count over the class squares the parent's, and the level totals of
+   sccount^2 and of sccount(sccount - 1) close in Catalan numbers.  Those are
+   the two totals the subtree statistic's max-split recursion runs into. *)
+
+Definition scsq (m : nat) : nat :=
+  fold_right (fun u acc => (sccount u m * sccount u m + acc)%nat) 0%nat
+             (gen132 m).
+
+Definition scpair (m : nat) : nat :=
+  fold_right (fun u acc => ((sccount u m - 1) * sccount u m + acc)%nat) 0%nat
+             (gen132 m).
+
+Lemma seq2_sum : forall s,
+  (2 * fold_right (fun j acc => (j + acc)%nat) 0%nat (seq 2 s)
+   = s * s + 3 * s)%nat.
+Proof.
+  induction s as [|s IH]; [reflexivity|].
+  rewrite (seq_snoc s 2).
+  rewrite (nfold_app nat (fun j => j) (seq 2 s) ((2 + s)%nat :: nil)).
+  rewrite (nfold_single nat (fun j => j) (2 + s)).
+  cbn beta. nia.
+Qed.
+
+Theorem scsq_closed : forall m,
+  (scsq m + 3 * card132 (S m) = 2 * card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (H1 : card132 (S (S m))
+               = fold_right (fun u acc =>
+                   (fold_right (fun j acc' => (j + acc')%nat) 0%nat
+                               (seq 2 (sccount u m)) + acc)%nat)
+                   0%nat (gen132 m)).
+  { rewrite (card132_sccount (S m)), (children_gen132 m).
+    rewrite (nfold_flat_map (list nat) (list nat)
+               (fun w => sccount w (S m)) (fun u => children u m) (gen132 m)).
+    apply nfold_ext_in. intros u Hu.
+    assert (Hp : is_perm u m) by (apply gen132_perm; exact Hu).
+    rewrite <- (nfold_map_gen (list nat) nat (fun j => j)
+                 (fun w => sccount w (S m)) (children u m)).
+    apply (nfold_perm nat (fun j => j)
+             (map (fun w => sccount w (S m)) (children u m))
+             (seq 2 (sccount u m)) (children_sccounts u m Hp)). }
+  assert (H2 : (2 * card132 (S (S m))
+                = fold_right (fun u acc =>
+                    (sccount u m * sccount u m + 3 * sccount u m + acc)%nat)
+                    0%nat (gen132 m))%nat).
+  { rewrite H1.
+    rewrite <- (nfold_scal (list nat) 2
+                 (fun u => fold_right (fun j acc => (j + acc)%nat) 0%nat
+                                      (seq 2 (sccount u m))) (gen132 m)).
+    apply nfold_ext_in. intros u _. apply seq2_sum. }
+  rewrite H2.
+  rewrite (fold_add_split (list nat)
+             (fun u => (sccount u m * sccount u m)%nat)
+             (fun u => (3 * sccount u m)%nat) (gen132 m)).
+  cbn beta.
+  rewrite (nfold_scal (list nat) 3 (fun u => sccount u m) (gen132 m)).
+  rewrite <- (card132_sccount m).
+  unfold scsq. lia.
+Qed.
+
+Corollary scpair_closed : forall m,
+  (scpair m + 4 * card132 (S m) = 2 * card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (H := scsq_closed m).
+  assert (E : (scpair m + card132 (S m) = scsq m)%nat).
+  { unfold scpair, scsq.
+    rewrite (card132_sccount m).
+    rewrite <- (fold_add_split (list nat)
+                 (fun u => ((sccount u m - 1) * sccount u m)%nat)
+                 (fun u => sccount u m) (gen132 m)).
+    apply nfold_ext_in. intros u Hu.
+    assert (Hp : is_perm u m) by (apply gen132_perm; exact Hu).
+    assert (Hpos : (1 <= sccount u m)%nat).
+    { unfold sccount.
+      apply (in_length_pos nat m).
+      apply filter_In. split; [apply in_seq; lia | apply topsplit_full]. }
+    nia. }
+  lia.
+Qed.
