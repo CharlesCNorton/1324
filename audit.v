@@ -1675,3 +1675,11 @@ Compute (map (fun M =>
                           (seq 0 (S M)) + acc)%nat) 0%nat (gen132f M))%nat,
            ((M * M * M + 35 * M * M + 216 * M + 288) * binomN (2 * M) M
             + (6 * M * M + 78 * M + 264) * 4 ^ M)%nat)) (seq 0 3)).
+
+(* ---- the d = 4 state sum, reduced to tree statistics ---- *)
+Print Assumptions nfold_const_add.
+Print Assumptions tri_tail.
+Print Assumptions d4form_stats.
+(* the per-word reduction, at a small word *)
+Compute (map (fun y => ((d4form (1 :: 0 :: 2 :: nil) 3 y + tri y)%nat,
+                        d4stat (1 :: 0 :: 2 :: nil) 3 y)) (seq 0 4)).

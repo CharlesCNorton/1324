@@ -21466,3 +21466,108 @@ Proof.
   rewrite E6, E35, E78, E216, E264, E288.
   field.
 Defined.
+
+(* The d = 4 state sum, reduced to two further tree statistics. *)
+
+
+(* The two statistics the d = 4 state sum adds: the clipped H over a node's
+   subtree, and the clipped H over the nodes between two given ones. *)
+
+Definition Din (u : list nat) (M y z : nat) : nat :=
+  fold_right (fun s acc => (Nat.min y (Hu u M s) + acc)%nat) 0%nat
+             (seq z (S (Nat.min y (Hu u M z) - z))).
+
+Definition Ein (u : list nat) (M w y : nat) : nat :=
+  fold_right (fun r acc => (Nat.min w (Hu u M r) + acc)%nat) 0%nat
+             (seq y (S (w - y))).
+
+Definition d4stat (u : list nat) (M y : nat) : nat :=
+  (12 + 2 * Hu u M y + 3 * y + 4 * (Hu u M y - y) + Cin u M y + Bin u M y
+   + fold_right (fun z acc =>
+       (6 + 4 * Nat.min y (Hu u M z) + Cin u M z + Din u M y z + acc)%nat)
+       0%nat (seq 1 y)
+   + fold_right (fun w acc =>
+       (11 + Hu u M w + 2 * y + Cin u M y + 3 * (w - y) + Ein u M w y
+        + 4 * (Hu u M w - w) + Bin u M w + acc)%nat) 0%nat
+       (seq y (S (Hu u M y - y))))%nat.
+
+Lemma nfold_const_add : forall (c : nat) (g : nat -> nat) (l : list nat),
+  fold_right (fun x acc => (c + g x + acc)%nat) 0%nat l
+  = (c * length l + fold_right (fun x acc => (g x + acc)%nat) 0%nat l)%nat.
+Proof.
+  intros c g l.
+  rewrite (fold_add_split nat (fun _ : nat => c) g l).
+  cbn beta. rewrite (nfold_const nat c l). reflexivity.
+Qed.
+
+Lemma tri_tail : forall y,
+  fold_right (fun z acc => (z + acc)%nat) 0%nat (seq 1 y) = tri y.
+Proof. intro y. unfold tri. reflexivity. Qed.
+
+Theorem d4form_stats : forall M u y, In u (gen132 M) -> y <= M ->
+  (d4form u M y + tri y = d4stat u M y)%nat.
+Proof.
+  intros M u y Hin HyM.
+  assert (Hp : is_perm u M) by (apply gen132_perm; exact Hin).
+  assert (Hg : y <= Hu u M y) by (apply Hu_ge; exact HyM).
+  unfold d4form, d4stat.
+  assert (EA1 : fold_right (fun s acc => (3 + Nat.min y (Hu u M s) + acc)%nat)
+                  0%nat (seq 1 y)
+              = (3 * y + Cin u M y)%nat).
+  { rewrite (nfold_const_add 3 (fun s => Nat.min y (Hu u M s)) (seq 1 y)).
+    rewrite length_seq. cbn beta. unfold Cin. reflexivity. }
+  assert (EA2 : fold_right (fun q acc => (4 + Hu u M q + acc)%nat) 0%nat
+                  (seq y (S (Hu u M y - y)))
+              = (4 * S (Hu u M y - y) + Bin u M y)%nat).
+  { rewrite (nfold_const_add 4 (fun q => Hu u M q)
+               (seq y (S (Hu u M y - y)))).
+    rewrite length_seq. cbn beta. unfold Bin. reflexivity. }
+  assert (EB : (fold_right (fun z acc =>
+      (3 + Nat.min y (Hu u M z)
+       + fold_right (fun t acc' => (2 + Nat.min z (Hu u M t) + acc')%nat)
+                    0%nat (seq 1 z)
+       + fold_right (fun s acc' => (3 + Nat.min y (Hu u M s) + acc')%nat)
+                    0%nat (seq z (S (Nat.min y (Hu u M z) - z)))
+       + acc)%nat) 0%nat (seq 1 y) + tri y)%nat
+    = fold_right (fun z acc =>
+        (6 + 4 * Nat.min y (Hu u M z) + Cin u M z + Din u M y z + acc)%nat)
+        0%nat (seq 1 y)).
+  { rewrite <- (tri_tail y).
+    rewrite <- (fold_add_split nat (fun z =>
+        (3 + Nat.min y (Hu u M z)
+         + fold_right (fun t acc' => (2 + Nat.min z (Hu u M t) + acc')%nat)
+                      0%nat (seq 1 z)
+         + fold_right (fun s acc' => (3 + Nat.min y (Hu u M s) + acc')%nat)
+                      0%nat (seq z (S (Nat.min y (Hu u M z) - z))))%nat)
+        (fun z => z) (seq 1 y)).
+    apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    rewrite (nfold_const_add 2 (fun t => Nat.min z (Hu u M t)) (seq 1 z)),
+            length_seq.
+    rewrite (nfold_const_add 3 (fun s => Nat.min y (Hu u M s))
+               (seq z (S (Nat.min y (Hu u M z) - z)))), length_seq.
+    assert (Hgz : z <= Hu u M z) by (apply Hu_ge; lia).
+    assert (Hzy : z <= Nat.min y (Hu u M z)) by lia.
+    cbn beta. unfold Cin, Din. lia. }
+  assert (EC : fold_right (fun w acc =>
+      (4 + Hu u M w
+       + fold_right (fun t acc' => (2 + Nat.min y (Hu u M t) + acc')%nat)
+                    0%nat (seq 1 y)
+       + fold_right (fun r acc' => (3 + Nat.min w (Hu u M r) + acc')%nat)
+                    0%nat (seq y (S (w - y)))
+       + fold_right (fun q acc' => (4 + Hu u M q + acc')%nat) 0%nat
+                    (seq w (S (Hu u M w - w)))
+       + acc)%nat) 0%nat (seq y (S (Hu u M y - y)))
+    = fold_right (fun w acc =>
+        (11 + Hu u M w + 2 * y + Cin u M y + 3 * (w - y) + Ein u M w y
+         + 4 * (Hu u M w - w) + Bin u M w + acc)%nat) 0%nat
+        (seq y (S (Hu u M y - y)))).
+  { apply nfold_ext_in. intros w Hw. apply in_seq in Hw.
+    rewrite (nfold_const_add 2 (fun t => Nat.min y (Hu u M t)) (seq 1 y)).
+    rewrite (nfold_const_add 3 (fun r => Nat.min w (Hu u M r))
+               (seq y (S (w - y)))).
+    rewrite (nfold_const_add 4 (fun q => Hu u M q)
+               (seq w (S (Hu u M w - w)))).
+    rewrite !length_seq.
+    cbn beta. unfold Cin, Ein, Bin. lia. }
+  rewrite EA1, EA2, EC. lia.
+Qed.
