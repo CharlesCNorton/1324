@@ -22685,3 +22685,41 @@ Qed.
 
 Theorem YHtot_closed : forall M, YHCL M.
 Proof. intro M. apply (YHtot_closed_upto M M). lia. Qed.
+
+(* The two position-weighted totals in closed form. *)
+
+
+Corollary Ytot_closed : forall M,
+  (8 * Ytot M = 2 * M * binomN (2 * M) M + M * 4 ^ M)%nat.
+Proof.
+  intro M.
+  assert (A := Ytot_YH M).
+  assert (B := YHtot_closed M). unfold YHCL in B.
+  assert (S1 := Sq_val M).
+  assert (S1c := f_equal (Nat.mul (card132 M)) S1).
+  assert (T1 := tri_val M).
+  assert (T1c := f_equal (Nat.mul (card132 M)) T1).
+  assert (Cb := card132_binom M).
+  assert (Cb1 := f_equal (Nat.mul (M * (2 * M + 1))) Cb).
+  assert (Cb2 := f_equal (Nat.mul M) Cb).
+  nia.
+Qed.
+
+Corollary Ttot_closed : forall M,
+  (8 * Ttot M = 2 * M * binomN (2 * M) M + M * 4 ^ M)%nat.
+Proof.
+  intro M.
+  assert (A := Ttot_YH M).
+  assert (H0 := Hsq0tot_split M).
+  assert (Hs := Hsqtot_closed M). unfold HSQCL in Hs.
+  assert (L := Ltot_closed M).
+  assert (B := YHtot_closed M). unfold YHCL in B.
+  assert (S1 := Sq_val M).
+  assert (S1c := f_equal (Nat.mul (card132 M)) S1).
+  assert (Cb := card132_binom M).
+  assert (Cb1 := f_equal (Nat.mul (M * (2 * M + 1))) Cb).
+  assert (Cb2 := f_equal (Nat.mul M) Cb).
+  assert (Cb3 := f_equal (Nat.mul (M * M)) Cb).
+  assert (Cb4 := f_equal (Nat.mul (2 * M * M * M)) Cb).
+  nia.
+Qed.

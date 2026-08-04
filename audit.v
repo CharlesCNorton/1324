@@ -1744,3 +1744,11 @@ Print Assumptions YHtot_closed.
 Compute (map (fun M => ((24 * YHtot M + 2 * M * binomN (2 * M) M)%nat,
                         (8 * M * M * binomN (2 * M) M + 3 * M * 4 ^ M)%nat))
              (seq 0 5)).
+
+(* ---- the two position-weighted totals ---- *)
+Print Assumptions Ytot_closed.
+Print Assumptions Ttot_closed.
+(* 8 Ytot M = 8 Ttot M = 2 M C(2M,M) + M 4^M *)
+Compute (map (fun M => ((8 * Ytot M)%nat, (8 * Ttot M)%nat,
+                        (2 * M * binomN (2 * M) M + M * 4 ^ M)%nat))
+             (seq 0 5)).
