@@ -1839,3 +1839,8 @@ Print Assumptions conv_BB2_val.
 Compute (map (fun n => ((TRIPtot n + 3 * card132 (S (S n)))%nat,
                         (card132 (S (S (S n))) + card132 (S n))%nat))
              (seq 0 4)).
+
+(* ---- more blocks of the second-order level sum ---- *)
+Print Assumptions conv_beta.
+Print Assumptions conv_U0.
+Print Assumptions conv_BB4_val.

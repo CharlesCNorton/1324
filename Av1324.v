@@ -23741,3 +23741,47 @@ Proof.
   cbn beta in S1, S2, S3.
   lia.
 Qed.
+
+(* More blocks of the second-order level sum. *)
+
+
+(* Moving a factor of the right index across the convolution. *)
+
+Lemma conv_beta : forall F g m,
+  (conv F (fun n => (n * g n)%nat) m + conv (fun k => (k * F k)%nat) g m
+   = m * conv F g m)%nat.
+Proof.
+  intros F g m. unfold conv.
+  rewrite <- (nfold_scal nat m (fun k => (F k * g (m - k))%nat) (seq 0 (S m))).
+  rewrite <- (fold_add_split nat
+    (fun k => (F k * ((m - k) * g (m - k)))%nat)
+    (fun k => (k * F k * g (m - k))%nat) (seq 0 (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+  remember (m - k)%nat as d eqn:Ed.
+  assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring.
+Qed.
+
+Lemma conv_U0 : forall m,
+  (conv card132 (fun n => card132 (S (S n))) m + card132 (S m)
+   + card132 (S (S m)) = card132 (S (S (S m))))%nat.
+Proof.
+  intro m.
+  assert (H := conv_shift2 (fun _ => 1%nat) m). cbn beta in H.
+  rewrite (wsum_const 1 (S (S m))) in H.
+  assert (Hb : conv (fun k => (1 * card132 k)%nat)
+                 (fun n => card132 (S (S n))) m
+             = conv card132 (fun n => card132 (S (S n))) m)
+    by (apply conv_ext; [intros k _; lia | intros n _; reflexivity]).
+  rewrite Hb in H. lia.
+Qed.
+
+Lemma conv_BB4_val : forall m,
+  (conv card132 Ptot m + 3 * card132 (S (S m))
+   = card132 (S (S (S m))) + card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := conv_Ptot card132 m).
+  assert (V := conv_V0 m).
+  assert (U := conv_U0 m).
+  lia.
+Qed.
