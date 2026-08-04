@@ -15500,6 +15500,168 @@ Definition Tstraightf (m : nat) : Z :=
                             + acc)%Z)
              0%Z (gen132f m).
 
+(* ------------------------------------------------------------------ *)
+(* The diagonal as a sum over Av(132).  gen_extend factors the enumerator at
+   level M + d through the level-M one, and a legal extension only ever bumps
+   the prefix, so the 132-freeness test reads the same on an extension as on
+   the word it came from.  D(d,M) is therefore the number of legal d-letter
+   extensions of a 132-avoider of length M, summed over Av(132)_M, and the same
+   holds fibre by fibre, which is the form two_term_law_of_fibres consumes. *)
+
+Lemma filter_none_gen : forall (A : Type) (P : A -> bool) (l : list A),
+  (forall x, In x l -> P x = false) -> filter P l = nil.
+Proof.
+  intros A P. induction l as [|a l IH]; intro H; cbn [filter]; [reflexivity|].
+  rewrite (H a (or_introl eq_refl)). apply IH.
+  intros x Hx. apply H. right. exact Hx.
+Qed.
+
+Lemma nfold_filter : forall (A : Type) (P : A -> bool) (g : A -> nat)
+    (l : list A),
+  fold_right (fun x acc => ((if P x then g x else 0) + acc)%nat) 0%nat l
+  = fold_right (fun x acc => (g x + acc)%nat) 0%nat (filter P l).
+Proof.
+  intros A P g. induction l as [|a l IH]; cbn [fold_right filter]; [reflexivity|].
+  destruct (P a); cbn [fold_right]; rewrite IH; lia.
+Qed.
+
+Lemma avoids132b_map_bump : forall y l,
+  avoids132b (map (bump y) l) = avoids132b l.
+Proof.
+  intros y l. unfold avoids132b.
+  destruct (contains_132_dec (map (bump y) l)) as [H|H];
+  destruct (contains_132_dec l) as [H2|H2]; try reflexivity.
+  - exfalso. apply H2. apply (contains_132_map y l). exact H.
+  - exfalso. apply H. apply (contains_132_map y l). exact H2.
+Qed.
+
+Lemma firstn_ext_le : forall M v y, (M <= length v)%nat ->
+  firstn M (ext v y) = map (bump y) (firstn M v).
+Proof.
+  intros M v y H. unfold ext.
+  rewrite firstn_app_le by (rewrite len_map; exact H).
+  apply firstn_map_nat.
+Qed.
+
+Lemma extend_len : forall m k u w, In w (extend u m k) ->
+  length w = (length u + k)%nat.
+Proof.
+  intros m k. induction k as [|k IH]; intros u w H.
+  - cbn [extend] in H. destruct H as [<- | []]. lia.
+  - cbn [extend] in H. apply in_flat_map in H. destruct H as [v [Hv Hw]].
+    apply in_map_iff in Hw. destruct Hw as [y [Hy _]]. subst w.
+    rewrite ext_length, (IH u v Hv). lia.
+Qed.
+
+Lemma avoids132b_extend : forall M d u w, length u = M ->
+  In w (extend u M d) -> avoids132b (firstn M w) = avoids132b u.
+Proof.
+  intros M d. induction d as [|d IH]; intros u w HL H.
+  - cbn [extend] in H. destruct H as [<- | []].
+    rewrite <- HL, firstn_all. reflexivity.
+  - cbn [extend] in H. apply in_flat_map in H. destruct H as [v [Hv Hw]].
+    apply in_map_iff in Hw. destruct Hw as [y [Hy _]]. subst w.
+    assert (Hlv : length v = (M + d)%nat)
+      by (rewrite (extend_len M d u v Hv), HL; reflexivity).
+    rewrite (firstn_ext_le M v y ltac:(lia)), avoids132b_map_bump.
+    exact (IH u v HL Hv).
+Qed.
+
+Lemma filter_extend : forall M d u, length u = M ->
+  filter (fun w => avoids132b (firstn M w)) (extend u M d)
+  = (if avoids132b u then extend u M d else nil).
+Proof.
+  intros M d u HL. destruct (avoids132b u) eqn:E.
+  - apply filter_all_gen. intros w Hw.
+    rewrite (avoids132b_extend M d u w HL Hw). exact E.
+  - apply filter_none_gen. intros w Hw.
+    rewrite (avoids132b_extend M d u w HL Hw). exact E.
+Qed.
+
+(* D(d,M) is the number of legal d-letter extensions of a 132-avoider,
+   summed over Av(132)_M. *)
+Theorem Ddiag_extend : forall d M,
+  Ddiag d M
+  = fold_right (fun u acc => (length (extend u M d) + acc)%nat) 0%nat
+               (gen132 M).
+Proof.
+  intros d M. unfold Ddiag.
+  rewrite gen_extend, filter_flat_map, length_flat_map_gen.
+  assert (Key : forall u, In u (gen M) ->
+    length (filter (fun w => avoids132b (firstn M w)) (extend u M d))
+    = (if avoids132b u then length (extend u M d) else 0)%nat).
+  { intros u Hu. assert (HL : length u = M) by av.
+    rewrite (filter_extend M d u HL). destruct (avoids132b u); reflexivity. }
+  rewrite (nfold_ext_in (list nat)
+             (fun u => length (filter (fun w => avoids132b (firstn M w))
+                                      (extend u M d)))
+             (fun u => if avoids132b u then length (extend u M d) else 0%nat)
+             (gen M) Key).
+  rewrite (nfold_filter (list nat) (fun u => avoids132b u)
+                        (fun u => length (extend u M d)) (gen M)).
+  apply nfold_perm. apply filter_gen_gen132.
+Qed.
+
+(* and the same at each suffix pattern *)
+Theorem Nsig_extend : forall d M sg,
+  Nsig d M sg
+  = fold_right (fun u acc =>
+      (length (filter (fun w => if list_eq_dec Nat.eq_dec (suffix_pat d w) sg
+                                then true else false) (extend u M d)) + acc)%nat)
+      0%nat (gen132 M).
+Proof.
+  intros d M sg. unfold Nsig.
+  rewrite <- (filter_filter (list nat) (fun w => avoids132b (firstn M w))
+                (fun w => if list_eq_dec Nat.eq_dec (suffix_pat d w) sg
+                          then true else false) (gen (M + d))).
+  rewrite gen_extend, filter_flat_map, filter_flat_map, length_flat_map_gen.
+  assert (Key : forall u, In u (gen M) ->
+    length (filter (fun w => if list_eq_dec Nat.eq_dec (suffix_pat d w) sg
+                             then true else false)
+              (filter (fun w => avoids132b (firstn M w)) (extend u M d)))
+    = (if avoids132b u
+       then length (filter (fun w => if list_eq_dec Nat.eq_dec (suffix_pat d w) sg
+                                     then true else false) (extend u M d))
+       else 0)%nat).
+  { intros u Hu. assert (HL : length u = M) by av.
+    rewrite (filter_extend M d u HL). destruct (avoids132b u); reflexivity. }
+  rewrite (nfold_ext_in (list nat) _
+             (fun u => if avoids132b u
+                       then length (filter
+                              (fun w => if list_eq_dec Nat.eq_dec
+                                             (suffix_pat d w) sg
+                                        then true else false) (extend u M d))
+                       else 0%nat)
+             (gen M) Key).
+  rewrite (nfold_filter (list nat) (fun u => avoids132b u)
+             (fun u => length (filter
+                        (fun w => if list_eq_dec Nat.eq_dec (suffix_pat d w) sg
+                                  then true else false) (extend u M d)))
+             (gen M)).
+  apply nfold_perm. apply filter_gen_gen132.
+Qed.
+
+(* At d = 1 the extension count is M + 1 at every 132-avoider, which is
+   Ddiag_one read through the reduction. *)
+Lemma extend_one_len : forall M u, In u (gen132 M) ->
+  length (extend u M 1) = S M.
+Proof.
+  intros M u Hu.
+  assert (H132 : ~ contains_132 u) by av.
+  cbn [extend flat_map]. rewrite app_nil_r, Nat.add_0_r, len_map.
+  rewrite (filter_all_gen nat (legalb u) (seq 0 (S M)));
+    [apply length_seq | intros y _; apply legalb_of_avoids132; exact H132].
+Qed.
+
+Corollary Ddiag_extend_one : forall M, Ddiag 1 M = (S M * card132 M)%nat.
+Proof.
+  intro M. rewrite (Ddiag_extend 1 M).
+  rewrite (nfold_ext_in (list nat) (fun u => length (extend u M 1))
+             (fun _ => S M) (gen132 M) (extend_one_len M)).
+  unfold card132. induction (gen132 M) as [|a l IH]; cbn [fold_right length];
+    [lia | rewrite IH; lia].
+Qed.
+
 Lemma Tstraightf_eq : forall m, Tstraightf m = Z.of_nat (Tstraight m).
 Proof.
   intro m. unfold Tstraightf, Tstraight. cbv zeta.

@@ -1142,6 +1142,35 @@ Print Assumptions filter_213.
 Print Assumptions filter_1324.
 Print Assumptions cell_reconstruct.
 
+(* ---- the diagonal as a sum over Av(132) ---- *)
+Print Assumptions filter_none_gen.
+Print Assumptions nfold_filter.
+Print Assumptions avoids132b_map_bump.
+Print Assumptions firstn_ext_le.
+Print Assumptions extend_len.
+Print Assumptions avoids132b_extend.
+Print Assumptions filter_extend.
+Print Assumptions Ddiag_extend.
+Print Assumptions Nsig_extend.
+Print Assumptions extend_one_len.
+Print Assumptions Ddiag_extend_one.
+(* D(2,M) against the extension sum over Av(132)_M *)
+Compute (map (fun M => (Ddiagf 2 M,
+                        fold_right (fun u acc =>
+                          (length (extend u M 2) + acc)%nat) 0%nat
+                          (gen132f M))) (seq 0 4)).
+(* and at d = 3, M = 2, where both sides are 103 *)
+Compute (Ddiagf 3 2,
+         fold_right (fun u acc => (length (extend u 2 3) + acc)%nat) 0%nat
+                    (gen132f 2)).
+(* the increasing fibre at d = 2, fibre by fibre *)
+Compute (map (fun M => (Nsigf 2 M [0; 1],
+                        fold_right (fun u acc =>
+                          (length (filter (fun w =>
+                             if list_eq_dec Nat.eq_dec (suffix_pat 2 w) [0; 1]
+                             then true else false) (extend u M 2)) + acc)%nat)
+                          0%nat (gen132f M))) (seq 0 4)).
+
 (* ---- the fast layer, completed ---- *)
 Print Assumptions cardf_eq.
 Print Assumptions card132f_eq.
