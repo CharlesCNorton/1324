@@ -18243,3 +18243,142 @@ Proof.
     with (Qdiv (Qmult 6 (Qn (Ddiag 3 M))) 6) by field.
   rewrite KQ. field.
 Defined.
+
+(* ------------------------------------------------------------------ *)
+(* The d = 3 state sum, reduced to two tree statistics.  Summing the two-letter
+   count over the alphabet leaves, beyond the level sum already closed, only
+   the total of H over each node's subtree and the total of the clipped H over
+   the nodes to its left. *)
+
+Definition Cin (u : list nat) (M y : nat) : nat :=
+  fold_right (fun z acc => (Nat.min y (Hu u M z) + acc)%nat) 0%nat (seq 1 y).
+
+Definition Bin (u : list nat) (M y : nat) : nat :=
+  fold_right (fun z acc => (Hu u M z + acc)%nat) 0%nat
+             (seq y (S (Hu u M y - y))).
+
+Definition Cw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (Cin u M y + acc)%nat) 0%nat (seq 0 (S M)).
+
+Definition Bw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (Bin u M y + acc)%nat) 0%nat (seq 0 (S M)).
+
+Definition Ctot (M : nat) : nat :=
+  fold_right (fun u acc => (Cw u M + acc)%nat) 0%nat (gen132 M).
+
+Definition Btot (M : nat) : nat :=
+  fold_right (fun u acc => (Bw u M + acc)%nat) 0%nat (gen132 M).
+
+Lemma nfold_five : forall (A : Type) (g1 g2 g3 g4 g5 : A -> nat) (l : list A),
+  fold_right (fun x acc => (g1 x + g2 x + g3 x + g4 x + g5 x + acc)%nat) 0%nat l
+  = (fold_right (fun x acc => (g1 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g2 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g3 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g4 x + acc)%nat) 0%nat l
+     + fold_right (fun x acc => (g5 x + acc)%nat) 0%nat l)%nat.
+Proof.
+  intros A g1 g2 g3 g4 g5. induction l as [|a l IH]; cbn [fold_right];
+    [reflexivity|]. rewrite IH. lia.
+Qed.
+
+Lemma inner_C_split : forall u M y,
+  fold_right (fun z acc => (2 + Nat.min y (Hu u M z) + acc)%nat) 0%nat (seq 1 y)
+  = (2 * y + Cin u M y)%nat.
+Proof.
+  intros u M y. unfold Cin.
+  rewrite (fold_add_split nat (fun _ : nat => 2)
+             (fun z => Nat.min y (Hu u M z)) (seq 1 y)).
+  cbn beta. rewrite (nfold_const nat 2 (seq 1 y)), length_seq. reflexivity.
+Qed.
+
+Lemma inner_B_split : forall u M y,
+  fold_right (fun z acc => (3 + Hu u M z + acc)%nat) 0%nat
+             (seq y (S (Hu u M y - y)))
+  = (3 * S (Hu u M y - y) + Bin u M y)%nat.
+Proof.
+  intros u M y. unfold Bin.
+  rewrite (fold_add_split nat (fun _ : nat => 3)
+             (fun z => Hu u M z) (seq y (S (Hu u M y - y)))).
+  cbn beta.
+  rewrite (nfold_const nat 3 (seq y (S (Hu u M y - y)))), length_seq.
+  reflexivity.
+Qed.
+
+Lemma tri_fold : forall M,
+  fold_right (fun y acc => (3 * y + acc)%nat) 0%nat (seq 0 (S M))
+  = (3 * tri M)%nat.
+Proof.
+  intro M. rewrite (nfold_scal nat 3 (fun y => y) (seq 0 (S M))).
+  unfold tri. reflexivity.
+Qed.
+
+Lemma Ddiag_three_word : forall u M,
+  fold_right (fun y acc =>
+    (3 + Hu u M y
+     + fold_right (fun z acc' => (2 + Nat.min y (Hu u M z) + acc')%nat) 0%nat
+                  (seq 1 y)
+     + fold_right (fun z acc' => (3 + Hu u M z + acc')%nat) 0%nat
+                  (seq y (S (Hu u M y - y)))
+     + acc)%nat) 0%nat (seq 0 (S M))
+  = (6 * S M + 3 * tri M + 4 * Lsum u M + Cw u M + Bw u M)%nat.
+Proof.
+  intros u M.
+  transitivity (fold_right (fun y acc =>
+      (6 + 3 * y + 4 * hgap u M y + Cin u M y + Bin u M y + acc)%nat)
+      0%nat (seq 0 (S M))).
+  - apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+    rewrite (inner_C_split u M y), (inner_B_split u M y).
+    assert (Hg : y <= Hu u M y) by (apply Hu_ge; lia).
+    unfold hgap. lia.
+  - rewrite (nfold_five nat (fun _ : nat => 6) (fun y => 3 * y)
+               (fun y => 4 * hgap u M y) (Cin u M) (Bin u M) (seq 0 (S M))).
+    cbn beta.
+    rewrite (nfold_const nat 6 (seq 0 (S M))), length_seq.
+    rewrite (tri_fold M).
+    rewrite (nfold_scal nat 4 (hgap u M) (seq 0 (S M))).
+    unfold Lsum, Cw, Bw. lia.
+Qed.
+
+Theorem Ddiag_three_stats : forall M,
+  Ddiag 3 M = (card132 M * (6 * S M + 3 * tri M) + 4 * Ltot M
+               + Ctot M + Btot M)%nat.
+Proof.
+  intro M. rewrite (Ddiag_three_H M).
+  transitivity (fold_right (fun u acc =>
+      ((6 * S M + 3 * tri M) + 4 * Lsum u M + Cw u M + Bw u M + acc)%nat)
+      0%nat (gen132 M)).
+  - apply nfold_ext_in. intros u _. apply Ddiag_three_word.
+  - rewrite (nfold_four (list nat)
+               (fun _ : list nat => (6 * S M + 3 * tri M)%nat)
+               (fun u => (4 * Lsum u M)%nat) (fun u => Cw u M) (fun u => Bw u M)
+               (gen132 M)).
+    cbn beta.
+    rewrite (nfold_const (list nat) (6 * S M + 3 * tri M) (gen132 M)).
+    rewrite (nfold_scal (list nat) 4 (fun u => Lsum u M) (gen132 M)).
+    unfold Ltot, Ctot, Btot, card132. nia.
+Qed.
+
+(* The two remaining totals, fitted and checked against the enumerator at
+   every size it reaches. *)
+
+Definition BTOT_CLOSED : Prop :=
+  forall M, (4 * Btot M = 4 * M * binomN (2 * M) M + M * 4 ^ M)%nat.
+
+Definition CTOT_CLOSED : Prop :=
+  forall M, (12 * Ctot M + 8 * M * binomN (2 * M) M + 6 * binomN (2 * M) M
+             = 2 * M * M * binomN (2 * M) M + (3 * M + 6) * 4 ^ M)%nat.
+
+Theorem three_of_stats : BTOT_CLOSED -> CTOT_CLOSED -> DDIAG_THREE_CLOSED.
+Proof.
+  intros HB HC M.
+  assert (Hred := Ddiag_three_stats M).
+  assert (Htri := tri_val M).
+  assert (Hcat := card132_binom M).
+  assert (Hlt := Ltot_closed M).
+  assert (Hb := HB M).
+  assert (Hc := HC M).
+  nia.
+Qed.
+
+Definition diagonal_three_of_stats (HB : BTOT_CLOSED) (HC : CTOT_CLOSED)
+  : Diagonal 3 := diagonal_three (three_of_stats HB HC).

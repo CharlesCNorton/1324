@@ -1443,3 +1443,27 @@ Compute (map (fun M => (Ddiagf 3 M,
 Compute (map (fun M => ((6 * Ddiagf 3 M)%nat,
                         ((M * M + 11 * M + 21) * binomN (2 * M) M
                          + (3 * M + 15) * 4 ^ M)%nat)) (seq 0 5)).
+
+(* ---- d = 3 reduced to two tree statistics ---- *)
+Print Assumptions nfold_five.
+Print Assumptions inner_C_split.
+Print Assumptions inner_B_split.
+Print Assumptions tri_fold.
+Print Assumptions Ddiag_three_word.
+Print Assumptions Ddiag_three_stats.
+Print Assumptions three_of_stats.
+Print Assumptions diagonal_three_of_stats.
+(* the reduction, against the enumerator *)
+Compute (map (fun M => (Ddiagf 3 M,
+                        (card132 M * (6 * S M + 3 * tri M) + 4 * Ltot M
+                         + Ctot M + Btot M)%nat)) (seq 0 4)).
+(* the subtree total: 4 Btot M = 4 M C(2M,M) + M 4^M *)
+Compute (map (fun M => ((4 * Btot M)%nat,
+                        (4 * M * binomN (2 * M) M + M * 4 ^ M)%nat))
+             (seq 0 6)).
+(* the clipped left total:
+   12 Ctot M + (8M + 6) C(2M,M) = 2 M^2 C(2M,M) + (3M + 6) 4^M *)
+Compute (map (fun M => ((12 * Ctot M + 8 * M * binomN (2 * M) M
+                         + 6 * binomN (2 * M) M)%nat,
+                        (2 * M * M * binomN (2 * M) M
+                         + (3 * M + 6) * 4 ^ M)%nat)) (seq 0 6)).
