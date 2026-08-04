@@ -1365,3 +1365,81 @@ Compute (map (fun M => ((2 * Ddiagf 2 M)%nat,
                         ((M + 3) * binomN (2 * M) M + 4 ^ M)%nat)) (seq 0 5)).
 (* the coefficient lists the closed d = 2 diagonal carries *)
 Compute (dp 2 diagonal_two_closed, dq 2 diagonal_two_closed).
+
+(* ---- the state of a d-letter extension, at every d ---- *)
+Print Assumptions Hu_laminar.
+Print Assumptions nth_ext_lo.
+Print Assumptions nth_ext_hi.
+Print Assumptions bump_ge.
+Print Assumptions bump_le_mono.
+Print Assumptions bump_at_cap.
+Print Assumptions bump_ge_iff.
+Print Assumptions bump_lt_below.
+Print Assumptions bump_ge_below.
+Print Assumptions bump_lt_above.
+Print Assumptions bump_ge_above.
+Print Assumptions hvals_ext_lo.
+Print Assumptions hvals_ext_hi.
+Print Assumptions Hu_ext_zero.
+Print Assumptions Hu_ext_lo.
+Print Assumptions Hu_ext_hi.
+Print Assumptions after_hvals.
+Print Assumptions hvals_map_bump_at.
+Print Assumptions three_value_ext_gen.
+Print Assumptions mucount_Mu.
+Print Assumptions Mu_le_cap.
+Print Assumptions Mu_le_in.
+Print Assumptions Mu_wit.
+Print Assumptions Mu_char.
+Print Assumptions Mu_ext.
+Print Assumptions mucount_ext_state.
+Print Assumptions extend_front.
+Print Assumptions extend_front_len.
+Print Assumptions Ddiag_front.
+(* the state function over Av(132)_3, and the laminar intervals it names *)
+Compute (map (fun u => (u, map (fun t => (t, Hu u 3 t)) (seq 0 4)))
+             (gen132f 3)).
+
+(* ---- the extension count read off the state ---- *)
+Print Assumptions Mu_free.
+Print Assumptions filter_legalb_count.
+Print Assumptions legal_iff_le_Mu.
+Print Assumptions filter_leb_seq.
+Print Assumptions filter_legalb_seq.
+Print Assumptions extend_one_unfold.
+Print Assumptions extend_one_state.
+Print Assumptions extend_len_one.
+Print Assumptions ext_avoids.
+Print Assumptions extend_two_state.
+Print Assumptions Mu_ext_free.
+Print Assumptions Hu_ext_zero_M.
+Print Assumptions Hu_ext_lo_M.
+Print Assumptions Hu_ext_hi_M.
+(* one- and two-letter extension counts against the enumerator, at M = 3 *)
+Compute (map (fun u => (length (extend u 3 1), S (Mu u 3))) (gen132f 3)).
+Compute (map (fun u => (length (extend u 3 2),
+                        fold_right (fun z acc =>
+                          (S (S (Nat.min (Mu u 3) (Hu u 3 z))) + acc)%nat)
+                          0%nat (seq 0 (S (Mu u 3))))) (gen132f 3)).
+
+(* ---- the d = 3 diagonal through the state function ---- *)
+Print Assumptions seq_split_d3.
+Print Assumptions extend_two_at.
+Print Assumptions Ddiag_three_H.
+Print Assumptions diagonal_three.
+(* D(3,M) through the state sum, against the enumerator *)
+Compute (map (fun M => (Ddiagf 3 M,
+  fold_right (fun u acc =>
+    (fold_right (fun y acc' =>
+       (3 + Hu u M y
+        + fold_right (fun z a => (2 + Nat.min y (Hu u M z) + a)%nat)
+                     0%nat (seq 1 y)
+        + fold_right (fun z a => (3 + Hu u M z + a)%nat)
+                     0%nat (seq y (S (Hu u M y - y)))
+        + acc')%nat) 0%nat (seq 0 (S M))
+     + acc)%nat) 0%nat (gen132f M))) (seq 0 4)).
+(* and against the two-term law it has to reach:
+   6 D(3,M) = (M^2 + 11M + 21) C(2M,M) + (3M + 15) 4^M *)
+Compute (map (fun M => ((6 * Ddiagf 3 M)%nat,
+                        ((M * M + 11 * M + 21) * binomN (2 * M) M
+                         + (3 * M + 15) * 4 ^ M)%nat)) (seq 0 5)).

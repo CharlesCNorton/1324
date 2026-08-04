@@ -17583,3 +17583,663 @@ Proof. apply R_at_minus_one_two_any. exact nsig_two_closed. Qed.
 Corollary exponent_law_at_zero_two_all : forall Dg : Diagonal 2,
   Qle (Qabs (rcoef 2 Dg 0)) (Qmult 1 (Qn (2 ^ 0))).
 Proof. apply exponent_law_at_zero_two. exact nsig_two_closed. Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The state of a d-letter extension, at every d.  For a permutation v the
+   pair (Mu v, H v) decides the whole extension count: Mu is the number of
+   legal letters less one, and both components transition exactly under ext.
+   The intervals [t, H t] are laminar, which is the tree carrying the state. *)
+
+Lemma Hu_laminar : forall u n y z,
+  y <= z -> z <= Hu u n y -> Hu u n z <= Hu u n y.
+Proof.
+  intros u n y z Hyz Hzh.
+  destruct (Hu_wit u n y) as [E|E].
+  - rewrite E. apply Hu_le_cap.
+  - apply Hu_le_in.
+    apply in_hvals in E. destruct E as [i [j [Hij [Hj [Hi [Hyj Hn]]]]]].
+    apply in_hvals. exists i, j. repeat split; lia.
+Qed.
+
+Lemma nth_ext_lo : forall v z i, i < length v ->
+  nth i (ext v z) 0 = bump z (nth i v 0).
+Proof.
+  intros v z i H. unfold ext.
+  rewrite nth_app1 by (rewrite len_map; exact H).
+  apply nth_map_in. exact H.
+Qed.
+
+Lemma nth_ext_hi : forall v z, nth (length v) (ext v z) 0 = z.
+Proof.
+  intros v z. unfold ext.
+  replace (length v) with (length (map (bump z) v)) by apply len_map.
+  apply nth_last.
+Qed.
+
+Lemma bump_ge : forall z x, x <= bump z x.
+Proof. intros z x. unfold bump. destruct (Nat.leb_spec z x); lia. Qed.
+
+Lemma bump_le_mono : forall z a b, a <= b -> bump z a <= bump z b.
+Proof.
+  intros z a b H. unfold bump.
+  destruct (Nat.leb_spec z a); destruct (Nat.leb_spec z b); lia.
+Qed.
+
+Lemma bump_at_cap : forall z n, z <= n -> bump z n = S n.
+Proof. intros z n H. unfold bump. destruct (Nat.leb_spec z n); lia. Qed.
+
+Lemma bump_ge_iff : forall z x, z <= bump z x <-> z <= x.
+Proof. intros z x. unfold bump. destruct (Nat.leb_spec z x); lia. Qed.
+
+(* Below the insertion point a threshold does not see the bump; above it the
+   threshold shifts by one. *)
+
+Lemma bump_lt_below : forall z x t, t <= z -> (bump z x < t <-> x < t).
+Proof. intros z x t H. unfold bump. destruct (Nat.leb_spec z x); lia. Qed.
+
+Lemma bump_ge_below : forall z x t, t <= z -> (t <= bump z x <-> t <= x).
+Proof. intros z x t H. unfold bump. destruct (Nat.leb_spec z x); lia. Qed.
+
+Lemma bump_lt_above : forall z x t, z < t -> (bump z x < t <-> x < t - 1).
+Proof. intros z x t H. unfold bump. destruct (Nat.leb_spec z x); lia. Qed.
+
+Lemma bump_ge_above : forall z x t, z < t -> (t <= bump z x <-> t - 1 <= x).
+Proof. intros z x t H. unfold bump. destruct (Nat.leb_spec z x); lia. Qed.
+
+Lemma hvals_ext_lo : forall v z t w,
+  is_perm v (length v) -> z <= length v -> 1 <= t -> t <= z ->
+  (In w (hvals (ext v z) t)
+   <-> (w = z \/ exists w', In w' (hvals v t) /\ w = bump z w')).
+Proof.
+  intros v z t w Hp Hzn Ht1 Htz.
+  assert (Hzero : exists i, i < length v /\ nth i v 0 = 0).
+  { assert (Hin : In 0 v) by (apply (perm_full v (length v) Hp); lia).
+    apply In_nth with (d := 0) in Hin. destruct Hin as [i [Hi Hn]].
+    exists i. split; [exact Hi | exact Hn]. }
+  destruct Hzero as [i0 [Hi0 Hn0]].
+  rewrite in_hvals. split.
+  - intros [i [j [Hij [Hj [Hi [Hyj Hn]]]]]].
+    rewrite ext_length in Hj.
+    destruct (Nat.eq_dec j (length v)) as [Ej|Ej].
+    + left. rewrite Ej, nth_ext_hi in Hn. lia.
+    + right.
+      assert (Hjv : j < length v) by lia.
+      rewrite (nth_ext_lo v z i ltac:(lia)) in Hi.
+      rewrite (nth_ext_lo v z j Hjv) in Hyj, Hn.
+      assert (Ki : nth i v 0 < t)
+        by (apply (bump_lt_below z (nth i v 0) t Htz); exact Hi).
+      assert (Kj : t <= nth j v 0)
+        by (apply (bump_ge_below z (nth j v 0) t Htz); exact Hyj).
+      exists (nth j v 0). split; [| symmetry; exact Hn].
+      apply in_hvals. exists i, j. repeat split; lia.
+  - intros [Ew | [w' [Hw' Ew]]].
+    + subst w. exists i0, (length v).
+      rewrite (nth_ext_lo v z i0 Hi0), nth_ext_hi, ext_length, Hn0.
+      assert (Ki : bump z 0 < t)
+        by (apply (bump_lt_below z 0 t Htz); lia).
+      repeat split; lia.
+    + apply in_hvals in Hw'.
+      destruct Hw' as [i [j [Hij [Hj [Hi [Hyj Hn]]]]]].
+      subst w'. subst w.
+      assert (Ki : bump z (nth i v 0) < t)
+        by (apply (bump_lt_below z (nth i v 0) t Htz); exact Hi).
+      assert (Kj : t <= bump z (nth j v 0))
+        by (apply (bump_ge_below z (nth j v 0) t Htz); exact Hyj).
+      exists i, j.
+      rewrite (nth_ext_lo v z i ltac:(lia)), (nth_ext_lo v z j Hj), ext_length.
+      repeat split; lia.
+Qed.
+
+Lemma hvals_ext_hi : forall v z t w,
+  z < t ->
+  (In w (hvals (ext v z) t)
+   <-> exists w', In w' (hvals v (t - 1)) /\ w = bump z w').
+Proof.
+  intros v z t w Hzt. rewrite in_hvals. split.
+  - intros [i [j [Hij [Hj [Hi [Hyj Hn]]]]]].
+    rewrite ext_length in Hj.
+    assert (Ej : j < length v).
+    { destruct (Nat.eq_dec j (length v)) as [E|E]; [|lia].
+      exfalso. rewrite E, nth_ext_hi in Hyj. lia. }
+    rewrite (nth_ext_lo v z i ltac:(lia)) in Hi.
+    rewrite (nth_ext_lo v z j Ej) in Hyj, Hn.
+    assert (Ki : nth i v 0 < t - 1)
+      by (apply (bump_lt_above z (nth i v 0) t Hzt); exact Hi).
+    assert (Kj : t - 1 <= nth j v 0)
+      by (apply (bump_ge_above z (nth j v 0) t Hzt); exact Hyj).
+    exists (nth j v 0). split; [| symmetry; exact Hn].
+    apply in_hvals. exists i, j. repeat split; lia.
+  - intros [w' [Hw' Ew]].
+    apply in_hvals in Hw'.
+    destruct Hw' as [i [j [Hij [Hj [Hi [Hyj Hn]]]]]].
+    subst w'. subst w.
+    assert (Ki : bump z (nth i v 0) < t)
+      by (apply (bump_lt_above z (nth i v 0) t Hzt); exact Hi).
+    assert (Kj : t <= bump z (nth j v 0))
+      by (apply (bump_ge_above z (nth j v 0) t Hzt); exact Hyj).
+    exists i, j.
+    rewrite (nth_ext_lo v z i ltac:(lia)), (nth_ext_lo v z j Hj), ext_length.
+    repeat split; lia.
+Qed.
+
+(* The transition of H: unchanged below the inserted letter but clipped there,
+   and shifted above it. *)
+
+Theorem Hu_ext_zero : forall v z,
+  Hu (ext v z) (S (length v)) 0 = S (length v).
+Proof. intros v z. apply Hu_zero. Qed.
+
+Theorem Hu_ext_lo : forall v z t,
+  is_perm v (length v) -> z <= length v -> 1 <= t -> t <= z ->
+  Hu (ext v z) (S (length v)) t = Nat.min z (Hu v (length v) t).
+Proof.
+  intros v z t Hp Hzn Ht1 Htz.
+  assert (Hcap := Hu_le_cap v (length v) t).
+  apply Hu_char.
+  - lia.
+  - intros s Hs.
+    destruct (proj1 (hvals_ext_lo v z t s Hp Hzn Ht1 Htz) Hs)
+      as [Es | [w' [Hw' Es]]].
+    + lia.
+    + assert (K := Hu_le_in v (length v) t w' Hw').
+      assert (Q := bump_ge z w'). lia.
+  - destruct (Nat.le_gt_cases z (Hu v (length v) t)) as [K|K].
+    + rewrite (Nat.min_l z _ K). right.
+      apply (hvals_ext_lo v z t z Hp Hzn Ht1 Htz). left. reflexivity.
+    + rewrite (Nat.min_r z (Hu v (length v) t) ltac:(lia)). right.
+      apply (hvals_ext_lo v z t (Hu v (length v) t) Hp Hzn Ht1 Htz).
+      destruct (Hu_wit v (length v) t) as [E|E]; [exfalso; lia|].
+      right. exists (Hu v (length v) t). split; [exact E|].
+      unfold bump. destruct (Nat.leb_spec z (Hu v (length v) t)); lia.
+Qed.
+
+Theorem Hu_ext_hi : forall v z t,
+  z <= length v -> z < t -> t <= S (length v) ->
+  Hu (ext v z) (S (length v)) t = bump z (Hu v (length v) (t - 1)).
+Proof.
+  intros v z t Hzn Hzt Htn.
+  assert (Hcap := Hu_le_cap v (length v) (t - 1)).
+  apply Hu_char.
+  - assert (K := bump_le_mono z (Hu v (length v) (t - 1)) (length v) Hcap).
+    rewrite (bump_at_cap z (length v) Hzn) in K. exact K.
+  - intros s Hs.
+    destruct (proj1 (hvals_ext_hi v z t s Hzt) Hs) as [w' [Hw' Es]].
+    assert (K := Hu_le_in v (length v) (t - 1) w' Hw').
+    rewrite Es. apply bump_le_mono. exact K.
+  - destruct (Hu_wit v (length v) (t - 1)) as [E|E].
+    + left. rewrite E. apply bump_at_cap. exact Hzn.
+    + right. apply (hvals_ext_hi v z t _ Hzt).
+      exists (Hu v (length v) (t - 1)). split; [exact E | reflexivity].
+Qed.
+
+(* The transition of mu.  The profile of an ext is the bumped union of the old
+   profile with the high set at the inserted letter. *)
+
+Lemma after_hvals : forall u z w, after u z w <-> In w (hvals u z).
+Proof.
+  intros u z w. unfold after. rewrite in_hvals. split.
+  - intros [Hzw [j [Hj [Hn [i [Hij Hi]]]]]].
+    exists i, j. repeat split; lia.
+  - intros [i [j [Hij [Hj [Hi [Hzj Hn]]]]]].
+    split; [lia|]. exists j. split; [exact Hj | split; [exact Hn|]].
+    exists i. split; [exact Hij | exact Hi].
+Qed.
+
+Lemma hvals_map_bump_at : forall v z w,
+  In w (hvals (map (bump z) v) z)
+  <-> exists w', In w' (hvals v z) /\ w = bump z w'.
+Proof.
+  intros v z w. rewrite in_hvals. split.
+  - intros [i [j [Hij [Hj [Hi [Hzj Hn]]]]]].
+    rewrite len_map in Hj.
+    rewrite (nth_map_in (bump z) v i ltac:(lia)) in Hi.
+    rewrite (nth_map_in (bump z) v j Hj) in Hzj, Hn.
+    assert (Ki : nth i v 0 < z)
+      by (apply (bump_lt_v z (nth i v 0)); exact Hi).
+    assert (Kj : z <= nth j v 0)
+      by (apply (bump_ge_iff z (nth j v 0)); exact Hzj).
+    exists (nth j v 0). split; [| symmetry; exact Hn].
+    apply in_hvals. exists i, j. repeat split; lia.
+  - intros [w' [Hw' Ew]].
+    apply in_hvals in Hw'.
+    destruct Hw' as [i [j [Hij [Hj [Hi [Hzj Hn]]]]]].
+    subst w'. subst w.
+    assert (Ki : bump z (nth i v 0) < z)
+      by (apply (bump_lt_v z (nth i v 0)); exact Hi).
+    assert (Kj : z <= bump z (nth j v 0))
+      by (apply (bump_ge_iff z (nth j v 0)); exact Hzj).
+    exists i, j. rewrite len_map.
+    rewrite (nth_map_in (bump z) v i ltac:(lia)).
+    rewrite (nth_map_in (bump z) v j Hj).
+    repeat split; lia.
+Qed.
+
+Theorem three_value_ext_gen : forall v z w,
+  three_value (ext v z) w
+  <-> exists w', (three_value v w' \/ In w' (hvals v z)) /\ w = bump z w'.
+Proof.
+  intros v z w. unfold ext.
+  rewrite (three_values_append (map (bump z) v) z w). split.
+  - intros [K | K].
+    + apply (three_value_map_bump z v w) in K. destruct K as [Hne Ht].
+      exists (unbump z w). split; [left; exact Ht|].
+      symmetry. apply bump_unbump. exact Hne.
+    + assert (K2 : new_three (map (bump z) v) z w) by exact K.
+      apply new_three_after in K2. destruct K2 as [Haf _].
+      apply after_hvals in Haf.
+      apply hvals_map_bump_at in Haf. destruct Haf as [w' [Hw' Ew]].
+      exists w'. split; [right; exact Hw' | exact Ew].
+  - intros [w' [[K | K] Ew]].
+    + left. apply (three_value_map_bump z v w). split.
+      * rewrite Ew. apply bump_ne.
+      * rewrite Ew, unbump_bump. exact K.
+    + right. apply new_three_after. split.
+      * apply after_hvals. apply hvals_map_bump_at.
+        exists w'. split; [exact K | exact Ew].
+      * assert (Hge : z <= w') by (apply (hvals_ge v z w'); exact K).
+        rewrite Ew. apply (bump_gt_v z w'). exact Hge.
+Qed.
+
+Definition Mu (v : list nat) (n : nat) : nat :=
+  match mub v with None => n | Some d => Nat.min d n end.
+
+Lemma mucount_Mu : forall v n, mucount v n = S (Mu v n).
+Proof. intros v n. unfold mucount, Mu. destruct (mub v); reflexivity. Qed.
+
+Lemma Mu_le_cap : forall v n, Mu v n <= n.
+Proof. intros v n. unfold Mu. destruct (mub v); lia. Qed.
+
+Lemma Mu_le_in : forall v n w, three_value v w -> Mu v n <= w.
+Proof.
+  intros v n w H. unfold Mu. destruct (mub v) as [d|] eqn:E.
+  - assert (K := mub_is_mu v d E). destruct K as [_ Hl].
+    assert (Q := Hl w H). lia.
+  - exfalso.
+    exact (proj1 (profile_empty_iff v) (mub_none_132free v E) w H).
+Qed.
+
+Lemma Mu_wit : forall v n, Mu v n = n \/ three_value v (Mu v n).
+Proof.
+  intros v n. unfold Mu. destruct (mub v) as [d|] eqn:E; [|left; reflexivity].
+  assert (K := mub_is_mu v d E). destruct K as [Hd _].
+  destruct (Nat.min_dec d n) as [M|M]; rewrite M;
+    [right; exact Hd | left; reflexivity].
+Qed.
+
+Lemma Mu_char : forall v n x,
+  x <= n -> (forall w, three_value v w -> x <= w) ->
+  (x = n \/ three_value v x) -> Mu v n = x.
+Proof.
+  intros v n x Hx Hmin Hw.
+  assert (H1 : Mu v n <= x).
+  { destruct Hw as [E|E]; [subst x; apply Mu_le_cap | apply Mu_le_in; exact E]. }
+  assert (H2 : x <= Mu v n).
+  { destruct (Mu_wit v n) as [E|E]; [rewrite E; exact Hx | apply Hmin; exact E]. }
+  lia.
+Qed.
+
+Theorem Mu_ext : forall v z n,
+  is_perm v n -> z <= n ->
+  Mu (ext v z) (S n) = bump z (Nat.min (Mu v n) (Hu v n z)).
+Proof.
+  intros v z n Hp Hzn.
+  assert (HM := Mu_le_cap v n).
+  assert (HH := Hu_le_cap v n z).
+  apply Mu_char.
+  - assert (K := bump_le_mono z (Nat.min (Mu v n) (Hu v n z)) n ltac:(lia)).
+    rewrite (bump_at_cap z n Hzn) in K. exact K.
+  - intros w Hw.
+    apply three_value_ext_gen in Hw. destruct Hw as [w' [[K|K] Ew]].
+    + assert (Q := Mu_le_in v n w' K). rewrite Ew.
+      apply bump_le_mono. lia.
+    + assert (Q : Hu v n z <= w') by (apply Hu_le_in; exact K).
+      rewrite Ew. apply bump_le_mono. lia.
+  - destruct (Nat.le_ge_cases (Mu v n) (Hu v n z)) as [K|K].
+    + rewrite (Nat.min_l _ _ K).
+      destruct (Mu_wit v n) as [E|E].
+      * left. rewrite E. apply bump_at_cap. exact Hzn.
+      * right. apply three_value_ext_gen.
+        exists (Mu v n). split; [left; exact E | reflexivity].
+    + rewrite (Nat.min_r _ _ K).
+      destruct (Hu_wit v n z) as [E|E].
+      * left. rewrite E. apply bump_at_cap. exact Hzn.
+      * right. apply three_value_ext_gen.
+        exists (Hu v n z). split; [right; exact E | reflexivity].
+Qed.
+
+(* The legal-letter count, in state terms. *)
+Corollary mucount_ext_state : forall v z n,
+  is_perm v n -> z <= n -> z <= Mu v n ->
+  mucount (ext v z) (S n) = S (S (Nat.min (Mu v n) (Hu v n z))).
+Proof.
+  intros v z n Hp Hzn Hzm.
+  rewrite mucount_Mu, (Mu_ext v z n Hp Hzn).
+  assert (HH : z <= Hu v n z) by (apply Hu_ge; exact Hzn).
+  f_equal. unfold bump.
+  destruct (Nat.leb_spec z (Nat.min (Mu v n) (Hu v n z))); lia.
+Qed.
+
+(* Peeling an extension from the front, so the transfer runs letter by letter
+   from the 132-free prefix outward. *)
+
+Theorem extend_front : forall u m k,
+  extend u m (S k) = flat_map (fun v => extend v (S m) k) (extend u m 1).
+Proof.
+  intros u m k. revert u m. induction k as [|k IH]; intros u m.
+  - transitivity (flat_map (fun x : list nat => x :: nil) (extend u m 1)).
+    + symmetry. apply flat_map_singleton.
+    + apply flat_map_ext_in. intros v _. reflexivity.
+  - change (extend u m (S (S k)))
+      with (flat_map (fun v => map (ext v)
+                       (filter (legalb v) (seq 0 (S (m + S k)))))
+                     (extend u m (S k))).
+    rewrite (IH u m), flat_map_assoc.
+    apply flat_map_ext_in. intros v _.
+    change (extend v (S m) (S k))
+      with (flat_map (fun v' => map (ext v')
+                       (filter (legalb v') (seq 0 (S (S m + k)))))
+                     (extend v (S m) k)).
+    replace (S m + k) with (m + S k) by lia. reflexivity.
+Qed.
+
+Corollary extend_front_len : forall M u k, In u (gen132 M) ->
+  length (extend u M (S k))
+  = fold_right (fun y acc => (length (extend (ext u y) (S M) k) + acc)%nat)
+               0%nat (seq 0 (S M)).
+Proof.
+  intros M u k Hu.
+  rewrite (extend_front u M k), length_flat_map_gen, (extend_one_eq M u Hu).
+  apply (nfold_map_gen nat (list nat) (fun v => length (extend v (S M) k))
+           (ext u) (seq 0 (S M))).
+Qed.
+
+Corollary Ddiag_front : forall d M,
+  Ddiag (S d) M
+  = fold_right (fun u acc =>
+      (fold_right (fun y acc' =>
+         (length (extend (ext u y) (S M) d) + acc')%nat) 0%nat (seq 0 (S M))
+       + acc)%nat) 0%nat (gen132 M).
+Proof.
+  intros d M. rewrite (Ddiag_extend (S d) M).
+  apply nfold_ext_in. intros u Hu. apply extend_front_len. exact Hu.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The extension count read off the state.  The legal letters at a word are an
+   initial segment of the alphabet cut at Mu, so a one-letter extension is a
+   segment and a two-letter one is a sum over that segment of the next Mu. *)
+
+Lemma Mu_free : forall u n, ~ contains_132 u -> Mu u n = n.
+Proof.
+  intros u n H. unfold Mu. destruct (mub u) as [d|] eqn:E; [|reflexivity].
+  exfalso. assert (K := mub_is_mu u d E). destruct K as [Hd _].
+  exact (proj1 (profile_empty_iff u) H d Hd).
+Qed.
+
+Lemma filter_legalb_count : forall v n, ~ contains_1324 v ->
+  length (filter (legalb v) (seq 0 (S n))) = mucount v n.
+Proof.
+  intros v n Hav. unfold mucount. destruct (mub v) as [d|] eqn:E.
+  - apply (fibre_count v n d Hav). apply mub_is_mu. exact E.
+  - apply fibre_count_free. apply mub_none_132free. exact E.
+Qed.
+
+Lemma legal_iff_le_Mu : forall v n y, ~ contains_1324 v -> y <= n ->
+  (legal v y <-> y <= Mu v n).
+Proof.
+  intros v n y Hav Hyn. unfold Mu. destruct (mub v) as [d|] eqn:E.
+  - assert (Hmu : is_mu v d) by (apply mub_is_mu; exact E).
+    rewrite (legal_iff_le_mu v d Hav Hmu y). lia.
+  - split; [intros _; lia | intros _].
+    apply legal_all_when_132_free. apply mub_none_132free. exact E.
+Qed.
+
+Lemma filter_leb_seq : forall N K, K < N ->
+  filter (fun y => Nat.leb y K) (seq 0 N) = seq 0 (S K).
+Proof.
+  induction N as [|N IH]; intros K H; [lia|].
+  rewrite (seq_snoc N 0), filter_app, Nat.add_0_l.
+  destruct (Nat.eq_dec K N) as [E|E].
+  - subst K. rewrite (filter_all_gen nat (fun y => Nat.leb y N) (seq 0 N)).
+    + cbn [filter]. rewrite Nat.leb_refl.
+      rewrite (seq_snoc N 0), Nat.add_0_l. reflexivity.
+    + intros y Hy. apply in_seq in Hy. apply Nat.leb_le. lia.
+  - rewrite (IH K ltac:(lia)). cbn [filter].
+    assert (Hf : Nat.leb N K = false) by (apply Nat.leb_gt; lia).
+    rewrite Hf, app_nil_r. reflexivity.
+Qed.
+
+Lemma filter_legalb_seq : forall v n, ~ contains_1324 v ->
+  filter (legalb v) (seq 0 (S n)) = seq 0 (S (Mu v n)).
+Proof.
+  intros v n Hav.
+  assert (HM := Mu_le_cap v n).
+  rewrite (filter_ext_in_nat (legalb v) (fun y => Nat.leb y (Mu v n))
+             (seq 0 (S n))).
+  - apply filter_leb_seq. lia.
+  - intros y Hy. apply in_seq in Hy.
+    destruct (legalb v y) eqn:El.
+    + symmetry. apply Nat.leb_le.
+      apply (legal_iff_le_Mu v n y Hav ltac:(lia)).
+      apply legalb_spec. exact El.
+    + symmetry. apply Nat.leb_gt.
+      destruct (Nat.le_gt_cases y (Mu v n)) as [K|K]; [exfalso | exact K].
+      assert (Hl : legal v y)
+        by (apply (legal_iff_le_Mu v n y Hav ltac:(lia)); exact K).
+      assert (E2 : legalb v y = true) by (apply legalb_spec; exact Hl).
+      rewrite El in E2. discriminate.
+Qed.
+
+Lemma extend_one_unfold : forall v n,
+  extend v n 1 = map (ext v) (filter (legalb v) (seq 0 (S n))).
+Proof.
+  intros v n. cbn [extend flat_map]. rewrite app_nil_r, Nat.add_0_r.
+  reflexivity.
+Qed.
+
+Lemma extend_one_state : forall v n, ~ contains_1324 v ->
+  extend v n 1 = map (ext v) (seq 0 (S (Mu v n))).
+Proof.
+  intros v n Hav.
+  rewrite (extend_one_unfold v n), (filter_legalb_seq v n Hav). reflexivity.
+Qed.
+
+Lemma extend_len_one : forall v n, ~ contains_1324 v ->
+  length (extend v n 1) = S (Mu v n).
+Proof.
+  intros v n Hav.
+  rewrite (extend_one_state v n Hav), len_map_gen, length_seq. reflexivity.
+Qed.
+
+Lemma ext_avoids : forall v n z, ~ contains_1324 v -> z <= Mu v n -> z <= n ->
+  ~ contains_1324 (ext v z).
+Proof.
+  intros v n z Hav Hzm Hzn.
+  apply ext_legal_iff. apply (legal_iff_le_Mu v n z Hav Hzn). exact Hzm.
+Qed.
+
+Theorem extend_two_state : forall v n, is_perm v n -> ~ contains_1324 v ->
+  length (extend v n 2)
+  = fold_right (fun z acc =>
+      (S (S (Nat.min (Mu v n) (Hu v n z))) + acc)%nat) 0%nat
+      (seq 0 (S (Mu v n))).
+Proof.
+  intros v n Hp Hav.
+  assert (HM := Mu_le_cap v n).
+  change 2 with (S 1).
+  rewrite (extend_front v n 1), length_flat_map_gen,
+          (extend_one_state v n Hav).
+  rewrite (nfold_map_gen nat (list nat)
+             (fun w => length (extend w (S n) 1)) (ext v) (seq 0 (S (Mu v n)))).
+  apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+  assert (Hzm : z <= Mu v n) by lia.
+  assert (Hzn : z <= n) by lia.
+  rewrite (extend_len_one (ext v z) (S n) (ext_avoids v n z Hav Hzm Hzn)).
+  rewrite <- (mucount_Mu (ext v z) (S n)).
+  apply (mucount_ext_state v z n Hp Hzn Hzm).
+Qed.
+
+Lemma Mu_ext_free : forall u M y, is_perm u M -> ~ contains_132 u -> y <= M ->
+  Mu (ext u y) (S M) = S (Hu u M y).
+Proof.
+  intros u M y Hp H132 HyM.
+  rewrite (Mu_ext u y M Hp HyM), (Mu_free u M H132).
+  assert (Hc := Hu_le_cap u M y).
+  assert (Hg : y <= Hu u M y) by (apply Hu_ge; exact HyM).
+  rewrite (Nat.min_r M (Hu u M y) Hc).
+  unfold bump. destruct (Nat.leb_spec y (Hu u M y)); lia.
+Qed.
+
+(* the transitions with the length written as the alphabet size *)
+
+Lemma Hu_ext_zero_M : forall u M y, length u = M ->
+  Hu (ext u y) (S M) 0 = S M.
+Proof. intros u M y H. subst M. apply Hu_ext_zero. Qed.
+
+Lemma Hu_ext_lo_M : forall u M y z, length u = M ->
+  is_perm u M -> y <= M -> 1 <= z -> z <= y ->
+  Hu (ext u y) (S M) z = Nat.min y (Hu u M z).
+Proof. intros u M y z HL Hp Hy Hz1 Hzy. subst M. apply Hu_ext_lo; assumption. Qed.
+
+Lemma Hu_ext_hi_M : forall u M y z, length u = M ->
+  y <= M -> y < z -> z <= S M ->
+  Hu (ext u y) (S M) z = bump y (Hu u M (z - 1)).
+Proof. intros u M y z HL Hy Hyz Hz. subst M. apply Hu_ext_hi; assumption. Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The d = 3 diagonal through the state function.  Laminarity collapses the
+   nested minima: above the inserted letter the second minimum is always the
+   inner one, so the two-letter extension count is one boundary term, one sum
+   over the letters below the insertion point, and one over the subtree at it. *)
+
+Lemma seq_split_d3 : forall y h, y <= h ->
+  seq 0 (S (S h)) = seq 0 1 ++ seq 1 y ++ seq (S y) (S h - y).
+Proof.
+  intros y h H.
+  replace (S (S h)) with (1 + (y + (S h - y))) by lia.
+  rewrite (seq_break 1 (y + (S h - y)) 0).
+  replace (0 + 1) with 1 by lia.
+  rewrite (seq_break y (S h - y) 1).
+  replace (1 + y) with (S y) by lia.
+  reflexivity.
+Qed.
+
+Theorem extend_two_at : forall M u y, In u (gen132 M) -> y <= M ->
+  length (extend (ext u y) (S M) 2)
+  = (3 + Hu u M y
+     + fold_right (fun z acc => (2 + Nat.min y (Hu u M z) + acc)%nat) 0%nat
+                  (seq 1 y)
+     + fold_right (fun z acc => (3 + Hu u M z + acc)%nat) 0%nat
+                  (seq y (S (Hu u M y - y))))%nat.
+Proof.
+  intros M u y Hin HyM.
+  assert (Hp : is_perm u M) by (apply gen132_perm; exact Hin).
+  assert (H132 : ~ contains_132 u) by (exact (gen132_av M u Hin)).
+  assert (Hlu : length u = M) by (apply (perm_len u M); exact Hp).
+  assert (Hc := Hu_le_cap u M y).
+  assert (Hg : y <= Hu u M y) by (apply Hu_ge; exact HyM).
+  assert (Hpe : is_perm (ext u y) (S M)) by (apply ext_perm; assumption).
+  assert (Hae : ~ contains_1324 (ext u y))
+    by (apply ext_all_legal_when_132_free; exact H132).
+  rewrite (extend_two_state (ext u y) (S M) Hpe Hae).
+  rewrite (Mu_ext_free u M y Hp H132 HyM).
+  rewrite (seq_split_d3 y (Hu u M y) Hg).
+  rewrite !(nfold_app nat (fun z =>
+    S (S (Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z))))).
+  assert (P1 : fold_right (fun z acc =>
+      (S (S (Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z))) + acc)%nat)
+      0%nat (seq 0 1) = (3 + Hu u M y)%nat).
+  { cbn [seq fold_right].
+    rewrite (Hu_ext_zero_M u M y Hlu).
+    rewrite (Nat.min_l (S (Hu u M y)) (S M) ltac:(lia)). lia. }
+  assert (P2 : fold_right (fun z acc =>
+      (S (S (Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z))) + acc)%nat)
+      0%nat (seq 1 y)
+    = fold_right (fun z acc => (2 + Nat.min y (Hu u M z) + acc)%nat) 0%nat
+                 (seq 1 y)).
+  { apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    assert (Hz1 : 1 <= z) by lia.
+    assert (Hzy : z <= y) by lia.
+    rewrite (Hu_ext_lo_M u M y z Hlu Hp HyM Hz1 Hzy).
+    assert (K : Nat.min y (Hu u M z) <= y) by lia.
+    rewrite (Nat.min_r (S (Hu u M y)) (Nat.min y (Hu u M z)) ltac:(lia)). lia. }
+  assert (P3 : fold_right (fun z acc =>
+      (S (S (Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z))) + acc)%nat)
+      0%nat (seq (S y) (S (Hu u M y) - y))
+    = fold_right (fun z acc => (3 + Hu u M z + acc)%nat) 0%nat
+                 (seq y (S (Hu u M y - y)))).
+  { replace (S (Hu u M y) - y) with (S (Hu u M y - y)) by lia.
+    rewrite <- (seq_shift (S (Hu u M y - y)) y).
+    rewrite (nfold_map_gen nat nat
+      (fun z => S (S (Nat.min (S (Hu u M y)) (Hu (ext u y) (S M) z)))) S
+      (seq y (S (Hu u M y - y)))).
+    cbn beta.
+    apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    assert (Hyz : y < S z) by lia.
+    assert (Hzn : S z <= S M) by lia.
+    rewrite (Hu_ext_hi_M u M y (S z) Hlu HyM Hyz Hzn).
+    replace (S z - 1) with z by lia.
+    assert (Hzh : Hu u M z <= Hu u M y)
+      by (apply (Hu_laminar u M y z); lia).
+    assert (Hgz : z <= Hu u M z) by (apply Hu_ge; lia).
+    assert (Eb : bump y (Hu u M z) = S (Hu u M z))
+      by (unfold bump; destruct (Nat.leb_spec y (Hu u M z)); lia).
+    rewrite Eb.
+    rewrite (Nat.min_r (S (Hu u M y)) (S (Hu u M z)) ltac:(lia)). lia. }
+  rewrite P1, P2, P3. lia.
+Qed.
+
+Theorem Ddiag_three_H : forall M,
+  Ddiag 3 M
+  = fold_right (fun u acc =>
+      (fold_right (fun y acc' =>
+         (3 + Hu u M y
+          + fold_right (fun z acc'' => (2 + Nat.min y (Hu u M z) + acc'')%nat)
+                       0%nat (seq 1 y)
+          + fold_right (fun z acc'' => (3 + Hu u M z + acc'')%nat)
+                       0%nat (seq y (S (Hu u M y - y)))
+          + acc')%nat) 0%nat (seq 0 (S M))
+       + acc)%nat) 0%nat (gen132 M).
+Proof.
+  intro M. change 3 with (S 2). rewrite (Ddiag_front 2 M).
+  apply nfold_ext_in. intros u Hu.
+  apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+  apply extend_two_at; [exact Hu | lia].
+Qed.
+
+(* The d = 3 two-term law, in the cleared form the state sum has to reach.
+   Fitted and checked against the enumerator at every size it reaches:
+   p_3 = (M^2 + 11M + 21)/6 of degree 2 with leading coefficient 1/3!, and
+   q_3 = (M + 5)/2 of degree 1 with leading coefficient C(3,2)/3!. *)
+Definition DDIAG_THREE_CLOSED : Prop :=
+  forall M, (6 * Ddiag 3 M
+             = (M * M + 11 * M + 21) * binomN (2 * M) M
+               + (3 * M + 15) * 4 ^ M)%nat.
+
+Definition diagonal_three (H : DDIAG_THREE_CLOSED) : Diagonal 3.
+Proof.
+  refine (mkDiagonal 3
+            (Qmake 21 6 :: Qmake 11 6 :: Qmake 1 6 :: nil)
+            (Qmake 15 6 :: Qmake 3 6 :: nil)
+            eq_refl eq_refl _).
+  intro M.
+  assert (K := H M).
+  assert (E : Qn (6 * Ddiag 3 M)%nat == Qmult 6 (Qn (Ddiag 3 M))).
+  { rewrite Qn_mul. assert (E6 : Qn 6 == 6) by (unfold Qn, Qeq; simpl; lia).
+    rewrite E6. reflexivity. }
+  assert (E3 : Qn 3 == 3) by (unfold Qn, Qeq; simpl; lia).
+  assert (E11 : Qn 11 == 11) by (unfold Qn, Qeq; simpl; lia).
+  assert (E15 : Qn 15 == 15) by (unfold Qn, Qeq; simpl; lia).
+  assert (E21 : Qn 21 == 21) by (unfold Qn, Qeq; simpl; lia).
+  assert (KQ : Qmult 6 (Qn (Ddiag 3 M))
+               == Qplus (Qmult (Qplus (Qplus (Qmult (Qn M) (Qn M))
+                                             (Qmult 11 (Qn M))) 21)
+                               (Qn (binomN (2 * M) M)))
+                        (Qmult (Qplus (Qmult 3 (Qn M)) 15) (Qn (4 ^ M)))).
+  { rewrite <- E, K, Qn_add, !Qn_mul, !Qn_add, !Qn_mul, E3, E11, E15, E21.
+    reflexivity. }
+  cbn [polyQ dp dq].
+  setoid_replace (Qn (Ddiag 3 M))
+    with (Qdiv (Qmult 6 (Qn (Ddiag 3 M))) 6) by field.
+  rewrite KQ. field.
+Defined.
