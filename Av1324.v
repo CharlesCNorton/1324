@@ -15662,6 +15662,255 @@ Proof.
     [lia | rewrite IH; lia].
 Qed.
 
+(* One column of the extension count is one mu-step, so the diagonal is a
+   d-step transfer over mu rather than an enumeration. *)
+
+Lemma extend_in_gen : forall m k u w, In u (gen m) -> In w (extend u m k) ->
+  In w (gen (m + k)).
+Proof.
+  intros m k u w Hu Hw. rewrite (gen_extend k m). apply in_flat_map.
+  exists u. split; [exact Hu | exact Hw].
+Qed.
+
+Theorem extend_succ_len : forall u m k, In u (gen m) ->
+  length (extend u m (S k))
+  = fold_right (fun w acc => (mucount w (m + k) + acc)%nat) 0%nat
+               (extend u m k).
+Proof.
+  intros u m k Hu. cbn [extend]. rewrite length_flat_map_gen.
+  apply nfold_ext_in. intros w Hw. rewrite len_map.
+  assert (Hg : In w (gen (m + k))) by (apply (extend_in_gen m k u w Hu Hw)).
+  assert (Hav : ~ contains_1324 w) by av.
+  unfold mucount. destruct (mub w) as [dd|] eqn:E.
+  - apply (fibre_count w (m + k) dd Hav). apply mub_is_mu. exact E.
+  - apply fibre_count_free. apply mub_none_132free. exact E.
+Qed.
+
+Lemma extend_one_eq : forall M u, In u (gen132 M) ->
+  extend u M 1 = map (ext u) (seq 0 (S M)).
+Proof.
+  intros M u Hu. assert (H132 : ~ contains_132 u) by av.
+  cbn [extend flat_map]. rewrite app_nil_r, Nat.add_0_r.
+  rewrite (filter_all_gen nat (legalb u) (seq 0 (S M)));
+    [reflexivity | intros y _; apply legalb_of_avoids132; exact H132].
+Qed.
+
+Lemma nfold_map_gen : forall (A B : Type) (g : B -> nat) (f : A -> B)
+    (l : list A),
+  fold_right (fun x acc => (g x + acc)%nat) 0%nat (map f l)
+  = fold_right (fun x acc => (g (f x) + acc)%nat) 0%nat l.
+Proof.
+  intros A B g f. induction l as [|a l IH]; cbn [map fold_right];
+    [reflexivity | rewrite IH; reflexivity].
+Qed.
+
+Corollary Ddiag_two_mu : forall M,
+  Ddiag 2 M
+  = fold_right (fun u acc =>
+      (fold_right (fun y acc' => (mucount (ext u y) (S M) + acc')%nat) 0%nat
+                  (seq 0 (S M)) + acc)%nat)
+      0%nat (gen132 M).
+Proof.
+  intro M. rewrite (Ddiag_extend 2 M). apply nfold_ext_in. intros u Hu.
+  assert (Hg : In u (gen M)) by (apply gen132_incl; exact Hu).
+  rewrite (extend_succ_len u M 1 Hg), (extend_one_eq M u Hu).
+  rewrite (nfold_map_gen nat (list nat) (fun w => mucount w (M + 1)) (ext u)
+                         (seq 0 (S M))).
+  apply nfold_ext_in. intros y _.
+  assert (E : (M + 1)%nat = S M) by lia. rewrite E. reflexivity.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The d = 2 state.  Appending y to a 132-free word creates exactly those 132
+   occurrences whose '3' is a value at or above y sitting after the first value
+   below y, so mu after the append is one more than the least such value.
+   H u M y is that value capped at M, and it carries the whole d = 2 transfer. *)
+
+Fixpoint firstlt (u : list nat) (y : nat) : nat :=
+  match u with
+  | nil => O
+  | x :: r => if Nat.ltb x y then O else S (firstlt r y)
+  end.
+
+Lemma firstlt_le : forall u y, (firstlt u y <= length u)%nat.
+Proof.
+  induction u as [|x r IH]; intro y; cbn [firstlt length]; [lia|].
+  destruct (Nat.ltb x y); [lia | assert (H := IH y); lia].
+Qed.
+
+Lemma firstlt_none : forall u y i, (i < firstlt u y)%nat ->
+  ~ (nth i u 0%nat < y)%nat.
+Proof.
+  induction u as [|x r IH]; intros y i H; cbn [firstlt] in H; [lia|].
+  destruct (Nat.ltb_spec x y) as [E|E]; [lia|].
+  destruct i as [|i]; cbn [nth]; [lia | apply IH; lia].
+Qed.
+
+Lemma firstlt_hit : forall u y, (firstlt u y < length u)%nat ->
+  (nth (firstlt u y) u 0%nat < y)%nat.
+Proof.
+  induction u as [|x r IH]; intros y H; cbn [firstlt length] in *; [lia|].
+  destruct (Nat.ltb_spec x y) as [E|E]; cbn [nth]; [exact E|].
+  apply IH. lia.
+Qed.
+
+Lemma firstlt_min : forall u y i,
+  (i < length u)%nat -> (nth i u 0%nat < y)%nat -> (firstlt u y <= i)%nat.
+Proof.
+  intros u y i H1 H2.
+  destruct (Nat.le_gt_cases (firstlt u y) i) as [K|K]; [exact K|].
+  exfalso. exact (firstlt_none u y i K H2).
+Qed.
+
+Lemma in_skipn_nth : forall (u : list nat) k w,
+  In w (skipn k u)
+  <-> exists j, (k <= j)%nat /\ (j < length u)%nat /\ nth j u 0%nat = w.
+Proof.
+  induction u as [|x r IH]; intros k w.
+  - rewrite skipn_nil. cbn [In length]. split;
+      [contradiction | intros [j [_ [H _]]]; lia].
+  - destruct k as [|k]; cbn [skipn].
+    + cbn [In length]. split.
+      * intros [He | H].
+        -- exists 0%nat. cbn [nth]. split; [lia | split; [lia | exact He]].
+        -- apply (IH 0%nat w) in H. destruct H as [j [_ [Hj Hn]]].
+           exists (S j). cbn [nth]. split; [lia | split; [lia | exact Hn]].
+      * intros [j [_ [Hj Hn]]]. destruct j as [|j]; cbn [nth] in Hn.
+        -- left. exact Hn.
+        -- right. apply (IH 0%nat w). exists j. cbn [length] in Hj.
+           split; [lia | split; [lia | exact Hn]].
+    + rewrite (IH k w). split.
+      * intros [j [H1 [H2 H3]]]. exists (S j). cbn [length nth].
+        split; [lia | split; [lia | exact H3]].
+      * intros [j [H1 [H2 H3]]]. destruct j as [|j]; [lia|].
+        cbn [nth] in H3. cbn [length] in H2.
+        exists j. split; [lia | split; [lia | exact H3]].
+Qed.
+
+Definition hvals (u : list nat) (y : nat) : list nat :=
+  filter (fun w => Nat.leb y w) (skipn (S (firstlt u y)) u).
+
+Lemma in_hvals : forall u y w,
+  In w (hvals u y)
+  <-> (exists i j, (i < j)%nat /\ (j < length u)%nat /\
+        (nth i u 0%nat < y)%nat /\ (y <= nth j u 0%nat)%nat /\
+        nth j u 0%nat = w).
+Proof.
+  intros u y w. unfold hvals. rewrite filter_In, in_skipn_nth. split.
+  - intros [[j [H1 [H2 H3]]] Hb]. apply Nat.leb_le in Hb.
+    assert (Hf : (firstlt u y < length u)%nat) by lia.
+    assert (Hhit : (nth (firstlt u y) u 0%nat < y)%nat)
+      by (apply firstlt_hit; exact Hf).
+    exists (firstlt u y), j. repeat split; lia.
+  - intros [i [j [Hij [Hj [Hi [Hyj Hn]]]]]].
+    assert (Hf : (firstlt u y <= i)%nat) by (apply firstlt_min; [lia | exact Hi]).
+    split.
+    + exists j. split; [lia | split; [exact Hj | exact Hn]].
+    + apply Nat.leb_le. rewrite Hn in Hyj. exact Hyj.
+Qed.
+
+Theorem three_value_ext : forall u y w, ~ contains_132 u ->
+  (three_value (ext u y) w <-> exists v, In v (hvals u y) /\ w = S v).
+Proof.
+  intros u y w Hu. unfold ext.
+  rewrite (three_values_append (map (bump y) u) y w).
+  assert (Hnf : forall z, ~ three_value (map (bump y) u) z).
+  { apply profile_empty_iff. intro C. apply Hu.
+    apply (contains_132_map y u). exact C. }
+  split.
+  - intros [K | [j [Hc Hw]]]; [exfalso; exact (Hnf w K)|].
+    destruct Hc as [Hj [Hyj [i [Hij Hi]]]]. rewrite len_map in Hj.
+    rewrite (nth_map_in (bump y) u j Hj) in Hyj, Hw.
+    rewrite (nth_map_in (bump y) u i ltac:(lia)) in Hi.
+    apply (bump_gt_v y (nth j u 0%nat)) in Hyj.
+    apply (bump_lt_v y (nth i u 0%nat)) in Hi.
+    exists (nth j u 0%nat). split.
+    + apply in_hvals. exists i, j. repeat split; lia.
+    + rewrite <- Hw. unfold bump.
+      destruct (Nat.leb_spec y (nth j u 0%nat)); [reflexivity | lia].
+  - intros [v [Hv Hw]]. right.
+    apply in_hvals in Hv. destruct Hv as [i [j [Hij [Hj [Hi [Hyj Hn]]]]]].
+    exists j. split.
+    + unfold candidate_strict. rewrite len_map.
+      rewrite (nth_map_in (bump y) u j Hj).
+      split; [exact Hj | split].
+      * apply (bump_gt_v y (nth j u 0%nat)). exact Hyj.
+      * exists i. rewrite (nth_map_in (bump y) u i ltac:(lia)).
+        split; [exact Hij | apply (bump_lt_v y (nth i u 0%nat)); exact Hi].
+    + rewrite (nth_map_in (bump y) u j Hj), Hn, Hw. unfold bump.
+      destruct (Nat.leb_spec y v); [reflexivity | lia].
+Qed.
+
+Definition Hu (u : list nat) (M y : nat) : nat :=
+  fold_right Nat.min M (hvals u y).
+
+Lemma foldmin_char : forall l c v0, In v0 l ->
+  (forall v, In v l -> (v0 <= v)%nat) ->
+  fold_right Nat.min c l = Nat.min v0 c.
+Proof.
+  induction l as [|a l IH]; intros c v0 Hin Hle; [contradiction|].
+  cbn [fold_right]. destruct l as [|b l].
+  - cbn [fold_right]. destruct Hin as [He | []]. subst a. reflexivity.
+  - assert (Hex : exists v1, In v1 (b :: l) /\ forall v, In v (b :: l) -> (v1 <= v)%nat).
+    { destruct (least_dec (fun z => In z (b :: l))
+                  (fun z => in_dec Nat.eq_dec z (b :: l)) b
+                  (or_introl eq_refl)) as [v1 [H1 H2]].
+      exists v1. split; [exact H1 | exact H2]. }
+    destruct Hex as [v1 [H1 H2]].
+    rewrite (IH c v1 H1 H2).
+    assert (Hv0 : (v0 <= a)%nat /\ (v0 <= v1)%nat)
+      by (split; apply Hle; [left; reflexivity | right; exact H1]).
+    destruct Hin as [He | Hin].
+    + subst a. lia.
+    + assert (K := H2 v0 Hin). lia.
+Qed.
+
+Lemma is_mu_unique : forall u d d', is_mu u d -> is_mu u d' -> d = d'.
+Proof.
+  intros u d d' [H1 H2] [H3 H4].
+  assert (K1 := H2 d' H3). assert (K2 := H4 d H1). lia.
+Qed.
+
+Theorem mucount_ext : forall u M y, ~ contains_132 u -> length u = M ->
+  mucount (ext u y) (S M) = S (S (Hu u M y)).
+Proof.
+  intros u M y Hu132 HL. unfold mucount, Hu.
+  destruct (mub (ext u y)) as [d|] eqn:E.
+  - assert (Hmu : is_mu (ext u y) d) by (apply mub_is_mu; exact E).
+    assert (Hd := proj1 Hmu).
+    apply (three_value_ext u y d Hu132) in Hd.
+    destruct Hd as [v0 [Hv0 Hdv]].
+    assert (Hmin : forall v, In v (hvals u y) -> (v0 <= v)%nat).
+    { intros v Hv.
+      assert (Hsv : three_value (ext u y) (S v)).
+      { apply (three_value_ext u y (S v) Hu132). exists v. split;
+          [exact Hv | reflexivity]. }
+      assert (K := proj2 Hmu (S v) Hsv). lia. }
+    rewrite (foldmin_char (hvals u y) M v0 Hv0 Hmin). lia.
+  - assert (Hnf : ~ contains_132 (ext u y))
+      by (apply mub_none_132free; exact E).
+    assert (He : hvals u y = nil).
+    { destruct (hvals u y) as [|v l] eqn:Ev; [reflexivity|].
+      exfalso.
+      assert (Hno := proj1 (profile_empty_iff (ext u y)) Hnf).
+      apply (Hno (S v)).
+      apply (three_value_ext u y (S v) Hu132). exists v.
+      split; [rewrite Ev; left; reflexivity | reflexivity]. }
+    rewrite He. cbn [fold_right]. lia.
+Qed.
+
+Theorem Ddiag_two_H : forall M,
+  Ddiag 2 M
+  = fold_right (fun u acc =>
+      (fold_right (fun y acc' => (S (S (Hu u M y)) + acc')%nat) 0%nat
+                  (seq 0 (S M)) + acc)%nat) 0%nat (gen132 M).
+Proof.
+  intro M. rewrite (Ddiag_two_mu M). apply nfold_ext_in. intros u Hu.
+  assert (H132 : ~ contains_132 u) by av.
+  assert (HL : length u = M) by av.
+  apply nfold_ext_in. intros y _. apply mucount_ext; assumption.
+Qed.
+
 Lemma Tstraightf_eq : forall m, Tstraightf m = Z.of_nat (Tstraight m).
 Proof.
   intro m. unfold Tstraightf, Tstraight. cbv zeta.

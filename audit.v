@@ -1154,6 +1154,18 @@ Print Assumptions Ddiag_extend.
 Print Assumptions Nsig_extend.
 Print Assumptions extend_one_len.
 Print Assumptions Ddiag_extend_one.
+Print Assumptions extend_in_gen.
+Print Assumptions extend_succ_len.
+Print Assumptions extend_one_eq.
+Print Assumptions nfold_map_gen.
+Print Assumptions Ddiag_two_mu.
+(* D(2,M) as a two-step mu transfer over Av(132)_M *)
+Compute (map (fun M => (Ddiagf 2 M,
+                        fold_right (fun u acc =>
+                          (fold_right (fun y acc' =>
+                             (mucount (ext u y) (S M) + acc')%nat) 0%nat
+                             (seq 0 (S M)) + acc)%nat) 0%nat (gen132f M)))
+             (seq 0 4)).
 (* D(2,M) against the extension sum over Av(132)_M *)
 Compute (map (fun M => (Ddiagf 2 M,
                         fold_right (fun u acc =>
@@ -1170,6 +1182,34 @@ Compute (map (fun M => (Nsigf 2 M [0; 1],
                              if list_eq_dec Nat.eq_dec (suffix_pat 2 w) [0; 1]
                              then true else false) (extend u M 2)) + acc)%nat)
                           0%nat (gen132f M))) (seq 0 4)).
+
+(* ---- the d = 2 state function ---- *)
+Print Assumptions firstlt_le.
+Print Assumptions firstlt_none.
+Print Assumptions firstlt_hit.
+Print Assumptions firstlt_min.
+Print Assumptions in_skipn_nth.
+Print Assumptions in_hvals.
+Print Assumptions three_value_ext.
+Print Assumptions foldmin_char.
+Print Assumptions is_mu_unique.
+Print Assumptions mucount_ext.
+Print Assumptions Ddiag_two_H.
+(* D(2,M) through the state function, against the enumeration *)
+Compute (map (fun M => (Ddiagf 2 M,
+                        fold_right (fun u acc =>
+                          (fold_right (fun y acc' =>
+                             (S (S (Hu u M y)) + acc')%nat) 0%nat
+                             (seq 0 (S M)) + acc)%nat) 0%nat (gen132f M)))
+             (seq 0 4)).
+(* the state function itself over Av(132)_3, and the total path length
+   Sum_u Sum_y (H u y - y) against (4^M - C(2M,M))/2 *)
+Compute (map (fun u => map (fun y => Hu u 3 y) (seq 0 4)) (gen132f 3)).
+Compute (map (fun M => (fold_right (fun u acc =>
+                          (fold_right (fun y acc' =>
+                             (Hu u M y - y + acc')%nat) 0%nat
+                             (seq 0 (S M)) + acc)%nat) 0%nat (gen132f M),
+                        ((4 ^ M - binomN (2 * M) M) / 2)%nat)) (seq 0 5)).
 
 (* ---- the fast layer, completed ---- *)
 Print Assumptions cardf_eq.
