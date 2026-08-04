@@ -1488,3 +1488,35 @@ Print Assumptions safelist_pairs.
 (* the safe values of each 132-avoider of length 4, and their ordered pairs *)
 Compute (map (fun b => (safelist b 4, pairge (safelist b 4), safecount b 4))
              (gen132f 4)).
+
+(* ---- the subtree statistic under the max-split ---- *)
+Print Assumptions Aw_split.
+Print Assumptions Bin_zero.
+Print Assumptions Atot_closed.
+Print Assumptions safe_iff_Hu.
+Print Assumptions filter_ge_seq.
+Print Assumptions cntge_safelist.
+Print Assumptions nfold_succ_gap.
+Print Assumptions Hsum_hi_block.
+Print Assumptions Bin_hi.
+Print Assumptions Bsum_hi_block.
+Print Assumptions Bin_lo_unsafe.
+Print Assumptions seq_split_tail.
+Print Assumptions Hsum_lo_tail.
+Print Assumptions Bin_lo_safe.
+Print Assumptions Bsum_lo_block.
+Print Assumptions Bw_midmax.
+(* the total of H over the class: 2 Atot M + C(2M,M) = M C(2M,M) + 4^M *)
+Compute (map (fun M => ((2 * Atot M + binomN (2 * M) M)%nat,
+                        (M * binomN (2 * M) M + 4 ^ M)%nat)) (seq 0 6)).
+(* the max-split recursion for the subtree statistic, at a small pair *)
+Compute (let a := (1 :: 0 :: nil) in let b := (0 :: 2 :: 1 :: nil) in
+         (Bw (midmax a b) (length a + S (length b)),
+          (Aw (midmax a b) (length a + S (length b))
+           + Bwp b (length b)
+           + (length a + 1) * pairge (safelist b (length b))
+           + length (safelist b (length b))
+             * (length a * length b + Awp a (length a)
+                + (length a + S (length b)))
+           + length b * Lsum a (length a) + Bwp a (length a)
+           + (length a + S (length b)))%nat)).

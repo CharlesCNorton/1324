@@ -18544,3 +18544,399 @@ Proof.
     nia. }
   lia.
 Qed.
+
+(* ------------------------------------------------------------------ *)
+(* The subtree statistic under the max-split.  Below the split an unsafe node
+   keeps the right factor's subtree sum and a safe one gains the whole tail;
+   above the split every node carries the left factor's, lifted.  The safe
+   nodes contribute their ordered pairs, which is where pairge enters. *)
+Definition Aw (u : list nat) (M : nat) : nat :=
+  fold_right (fun z acc => (Hu u M z + acc)%nat) 0%nat (seq 0 (S M)).
+
+Definition Awp (u : list nat) (M : nat) : nat :=
+  fold_right (fun z acc => (Hu u M z + acc)%nat) 0%nat (seq 1 M).
+
+Definition Bwp (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (Bin u M y + acc)%nat) 0%nat (seq 1 M).
+
+Lemma Aw_split : forall u M, Aw u M = (tri M + Lsum u M)%nat.
+Proof.
+  intros u M. unfold Aw.
+  transitivity (fold_right (fun z acc => (z + hgap u M z + acc)%nat) 0%nat
+                           (seq 0 (S M))).
+  - apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    assert (Hg : z <= Hu u M z) by (apply Hu_ge; lia).
+    unfold hgap. lia.
+  - rewrite (fold_add_split nat (fun z => z) (hgap u M) (seq 0 (S M))).
+    cbn beta. unfold tri, Lsum. reflexivity.
+Qed.
+
+Definition Atot (M : nat) : nat :=
+  fold_right (fun u acc => (Aw u M + acc)%nat) 0%nat (gen132 M).
+
+Theorem Atot_closed : forall M,
+  (2 * Atot M + binomN (2 * M) M = M * binomN (2 * M) M + 4 ^ M)%nat.
+Proof.
+  intro M.
+  assert (HA : Atot M = (card132 M * tri M + Ltot M)%nat).
+  { unfold Atot.
+    transitivity (fold_right (fun u acc => (tri M + Lsum u M + acc)%nat) 0%nat
+                             (gen132 M)).
+    - apply nfold_ext_in. intros u _. apply Aw_split.
+    - rewrite (fold_add_split (list nat) (fun _ : list nat => tri M)
+                 (fun u => Lsum u M) (gen132 M)).
+      cbn beta.
+      rewrite (nfold_const (list nat) (tri M) (gen132 M)).
+      unfold Ltot, card132. nia. }
+  assert (Htri := tri_val M).
+  assert (Hcat := card132_binom M).
+  assert (Hlt := Ltot_closed M).
+  nia.
+Qed.
+Lemma Bin_zero : forall u M, Bin u M 0 = Aw u M.
+Proof.
+  intros u M. unfold Bin, Aw. rewrite Hu_zero.
+  replace (M - 0) with M by lia. reflexivity.
+Qed.
+
+Lemma safe_iff_Hu : forall b y,
+  is_perm b (length b) ->
+  (safe_at b y <-> Hu b (length b) y = length b).
+Proof.
+  intros b y Hp. split.
+  - intro Hs. apply Hu_safe. exact Hs.
+  - intro E. apply hvals_empty_safe. intros v Hv.
+    assert (K := Hu_le_in b (length b) y v Hv).
+    apply in_hvals in Hv.
+    destruct Hv as [_ [j [_ [Hj [_ [_ Hn]]]]]].
+    assert (Hlt : v < length b).
+    { rewrite <- Hn. destruct Hp as [_ [_ Hb]]. apply Hb. apply nth_In. lia. }
+    lia.
+Qed.
+
+Lemma filter_ge_seq : forall n y, 1 <= y -> y <= n ->
+  filter (fun z => Nat.leb y z) (seq 1 n) = seq y (S (n - y)).
+Proof.
+  induction n as [|n IH]; intros y H1 H2; [lia|].
+  rewrite (seq_snoc n 1), filter_app.
+  destruct (Nat.eq_dec y (S n)) as [E|E].
+  - subst y.
+    rewrite (filter_all_false (fun z => Nat.leb (S n) z) (seq 1 n)).
+    + cbn [filter]. replace (1 + n) with (S n) by lia.
+      rewrite Nat.leb_refl. replace (S n - S n) with 0 by lia. reflexivity.
+    + intros z Hz. apply in_seq in Hz. apply Nat.leb_gt. lia.
+  - rewrite (IH y H1 ltac:(lia)). cbn [filter].
+    replace (1 + n) with (S n) by lia.
+    assert (Hy : Nat.leb y (S n) = true) by (apply Nat.leb_le; lia).
+    rewrite Hy.
+    replace (S n - y) with (S (n - y)) by lia.
+    rewrite (seq_snoc (S (n - y)) y).
+    replace (y + S (n - y)) with (S n) by lia. reflexivity.
+Qed.
+
+Lemma cntge_safelist : forall b n y, 1 <= y -> y <= n ->
+  cntge (safelist b n) y
+  = length (filter (safeb b) (seq y (S (n - y)))).
+Proof.
+  intros b n y H1 H2. unfold cntge, safelist.
+  rewrite (filter_filter nat (safeb b) (fun z => Nat.leb y z) (seq 1 n)).
+  rewrite <- (filter_ge_seq n y H1 H2).
+  rewrite (filter_filter nat (fun z => Nat.leb y z) (safeb b) (seq 1 n)).
+  f_equal. apply filter_ext_gen. intro z. apply Bool.andb_comm.
+Qed.
+
+Lemma nfold_succ_gap : forall u N,
+  fold_right (fun y acc => (S (hgap u N y) + acc)%nat) 0%nat (seq 1 N)
+  = Lsum u N.
+Proof.
+  intros u N.
+  change (fun y acc => (S (hgap u N y) + acc)%nat)
+    with (fun y acc => (1 + hgap u N y + acc)%nat).
+  rewrite (fold_add_split nat (fun _ : nat => 1) (hgap u N) (seq 1 N)).
+  cbn beta.
+  rewrite (nfold_const nat 1 (seq 1 N)), length_seq.
+  assert (HL := Lsum_tail u N). lia.
+Qed.
+
+(* the block above the split contributes the left factor, lifted *)
+
+Lemma Hsum_hi_block : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  fold_right (fun z acc =>
+    (Hu (midmax a b) (length a + S (length b)) z + acc)%nat) 0%nat
+    (seq (S (length b)) (length a))
+  = (length a * length b + Awp a (length a))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  replace (seq (S (length b)) (length a))
+    with (map (fun t => t + length b) (seq 1 (length a)))
+    by (rewrite seq_add_map; reflexivity).
+  rewrite (nfold_map_gen nat nat
+             (Hu (midmax a b) (length a + S (length b)))
+             (fun t => t + length b) (seq 1 (length a))).
+  cbn beta.
+  transitivity (fold_right (fun z acc =>
+      (length b + Hu a (length a) z + acc)%nat) 0%nat (seq 1 (length a))).
+  - apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    rewrite (Hu_midmax_hi a b (z + length b) Hpa Hpb ltac:(lia) ltac:(lia)).
+    replace (z + length b - length b) with z by lia. reflexivity.
+  - rewrite (fold_add_split nat (fun _ : nat => length b)
+               (fun z => Hu a (length a) z) (seq 1 (length a))).
+    cbn beta.
+    rewrite (nfold_const nat (length b) (seq 1 (length a))), length_seq.
+    unfold Awp. lia.
+Qed.
+
+(* and each of its nodes carries the left factor's subtree sum, lifted *)
+
+Lemma Bin_hi : forall a b y,
+  is_perm a (length a) -> is_perm b (length b) -> 1 <= y -> y <= length a ->
+  Bin (midmax a b) (length a + S (length b)) (y + length b)
+  = (length b * S (Hu a (length a) y - y) + Bin a (length a) y)%nat.
+Proof.
+  intros a b y Hpa Hpb Hy1 Hya.
+  assert (Hc := Hu_le_cap a (length a) y).
+  assert (Hg : y <= Hu a (length a) y) by (apply Hu_ge; lia).
+  unfold Bin at 1.
+  rewrite (Hu_midmax_hi a b (y + length b) Hpa Hpb ltac:(lia) ltac:(lia)).
+  replace (y + length b - length b) with y by lia.
+  replace (length b + Hu a (length a) y - (y + length b))
+    with (Hu a (length a) y - y) by lia.
+  replace (seq (y + length b) (S (Hu a (length a) y - y)))
+    with (map (fun t => t + length b) (seq y (S (Hu a (length a) y - y))))
+    by (rewrite seq_add_map; reflexivity).
+  rewrite (nfold_map_gen nat nat
+             (Hu (midmax a b) (length a + S (length b)))
+             (fun t => t + length b) (seq y (S (Hu a (length a) y - y)))).
+  cbn beta.
+  transitivity (fold_right (fun z acc =>
+      (length b + Hu a (length a) z + acc)%nat) 0%nat
+      (seq y (S (Hu a (length a) y - y)))).
+  - apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    assert (Hzc := Hu_le_cap a (length a) z).
+    rewrite (Hu_midmax_hi a b (z + length b) Hpa Hpb ltac:(lia) ltac:(lia)).
+    replace (z + length b - length b) with z by lia. reflexivity.
+  - rewrite (fold_add_split nat (fun _ : nat => length b)
+               (fun z => Hu a (length a) z)
+               (seq y (S (Hu a (length a) y - y)))).
+    cbn beta.
+    rewrite (nfold_const nat (length b)
+               (seq y (S (Hu a (length a) y - y)))), length_seq.
+    unfold Bin. lia.
+Qed.
+
+Theorem Bsum_hi_block : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  fold_right (fun y acc =>
+    (Bin (midmax a b) (length a + S (length b)) y + acc)%nat) 0%nat
+    (seq (S (length b)) (length a))
+  = (length b * Lsum a (length a) + Bwp a (length a))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  replace (seq (S (length b)) (length a))
+    with (map (fun t => t + length b) (seq 1 (length a)))
+    by (rewrite seq_add_map; reflexivity).
+  rewrite (nfold_map_gen nat nat
+             (Bin (midmax a b) (length a + S (length b)))
+             (fun t => t + length b) (seq 1 (length a))).
+  cbn beta.
+  transitivity (fold_right (fun y acc =>
+      (length b * S (hgap a (length a) y) + Bin a (length a) y + acc)%nat)
+      0%nat (seq 1 (length a))).
+  - apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+    rewrite (Bin_hi a b y Hpa Hpb ltac:(lia) ltac:(lia)).
+    unfold hgap. reflexivity.
+  - rewrite (fold_add_split nat
+               (fun y => (length b * S (hgap a (length a) y))%nat)
+               (fun y => Bin a (length a) y) (seq 1 (length a))).
+    cbn beta.
+    rewrite (nfold_scal nat (length b)
+               (fun y => S (hgap a (length a) y)) (seq 1 (length a))).
+    rewrite (nfold_succ_gap a (length a)).
+    unfold Bwp. reflexivity.
+Qed.
+
+(* below the split an unsafe node keeps the right factor's subtree sum *)
+
+Lemma Bin_lo_unsafe : forall a b y,
+  is_perm a (length a) -> is_perm b (length b) ->
+  1 <= y -> y <= length b -> ~ safe_at b y ->
+  Bin (midmax a b) (length a + S (length b)) y = Bin b (length b) y.
+Proof.
+  intros a b y Hpa Hpb Hy1 Hyb Hns.
+  assert (Hc := Hu_le_cap b (length b) y).
+  assert (Hlt : Hu b (length b) y < length b).
+  { destruct (Nat.eq_dec (Hu b (length b) y) (length b)) as [E|E]; [|lia].
+    exfalso. apply Hns. apply (safe_iff_Hu b y Hpb). exact E. }
+  assert (Hg : y <= Hu b (length b) y) by (apply Hu_ge; lia).
+  unfold Bin.
+  rewrite (Hu_midmax_lo_unsafe a b y Hy1 Hyb Hpb Hns).
+  apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+  assert (Hlam : Hu b (length b) z <= Hu b (length b) y)
+    by (apply (Hu_laminar b (length b) y z); lia).
+  assert (Hnsz : ~ safe_at b z).
+  { intro C. assert (E := proj1 (safe_iff_Hu b z Hpb) C). lia. }
+  apply (Hu_midmax_lo_unsafe a b z ltac:(lia) ltac:(lia) Hpb Hnsz).
+Qed.
+
+Lemma seq_split_tail : forall al bl y, y <= bl ->
+  seq y (S (al + S bl - y))
+  = seq y (S (bl - y)) ++ seq (S bl) al ++ seq (al + S bl) 1.
+Proof.
+  intros al bl y H.
+  replace (S (al + S bl - y)) with (S (bl - y) + (al + 1)) by lia.
+  rewrite (seq_break (S (bl - y)) (al + 1) y).
+  replace (y + S (bl - y)) with (S bl) by lia.
+  rewrite (seq_break al 1 (S bl)).
+  replace (S bl + al) with (al + S bl) by lia.
+  reflexivity.
+Qed.
+
+Lemma Hsum_lo_tail : forall a b y,
+  is_perm a (length a) -> is_perm b (length b) ->
+  1 <= y -> y <= length b -> safe_at b y ->
+  fold_right (fun z acc =>
+    (Hu (midmax a b) (length a + S (length b)) z + acc)%nat) 0%nat
+    (seq y (S (length b - y)))
+  = (Bin b (length b) y
+     + (length a + 1) * cntge (safelist b (length b)) y)%nat.
+Proof.
+  intros a b y Hpa Hpb Hy1 Hyb Hs.
+  assert (Eb : Hu b (length b) y = length b)
+    by (apply (safe_iff_Hu b y Hpb); exact Hs).
+  transitivity (fold_right (fun z acc =>
+      (Hu b (length b) z
+       + (if safeb b z then (length a + 1) else 0) + acc)%nat) 0%nat
+      (seq y (S (length b - y)))).
+  - apply nfold_ext_in. intros z Hz. apply in_seq in Hz.
+    destruct (safeb b z) eqn:Es.
+    + assert (Hsz : safe_at b z) by (apply safeb_spec; exact Es).
+      rewrite (Hu_midmax_lo_safe a b z ltac:(lia) ltac:(lia) Hsz).
+      assert (E := proj1 (safe_iff_Hu b z Hpb) Hsz). lia.
+    + assert (Hnsz : ~ safe_at b z).
+      { intro C. assert (K : safeb b z = true) by (apply safeb_spec; exact C).
+        rewrite Es in K. discriminate. }
+      rewrite (Hu_midmax_lo_unsafe a b z ltac:(lia) ltac:(lia) Hpb Hnsz). lia.
+  - rewrite (fold_add_split nat (fun z => Hu b (length b) z)
+               (fun z => if safeb b z then (length a + 1) else 0)
+               (seq y (S (length b - y)))).
+    cbn beta.
+    rewrite (nfold_filter nat (safeb b) (fun _ : nat => (length a + 1)%nat)
+               (seq y (S (length b - y)))).
+    rewrite (nfold_const nat (length a + 1)
+               (filter (safeb b) (seq y (S (length b - y))))).
+    rewrite <- (cntge_safelist b (length b) y Hy1 Hyb).
+    unfold Bin. rewrite Eb. lia.
+Qed.
+
+Lemma Bin_lo_safe : forall a b y,
+  is_perm a (length a) -> is_perm b (length b) ->
+  1 <= y -> y <= length b -> safe_at b y ->
+  Bin (midmax a b) (length a + S (length b)) y
+  = (Bin b (length b) y
+     + (length a + 1) * cntge (safelist b (length b)) y
+     + (length a * length b + Awp a (length a)
+        + (length a + S (length b))))%nat.
+Proof.
+  intros a b y Hpa Hpb Hy1 Hyb Hs.
+  unfold Bin at 1.
+  rewrite (Hu_midmax_lo_safe a b y Hy1 Hyb Hs).
+  rewrite (seq_split_tail (length a) (length b) y Hyb).
+  rewrite !(nfold_app nat (Hu (midmax a b) (length a + S (length b)))).
+  rewrite (Hsum_lo_tail a b y Hpa Hpb Hy1 Hyb Hs).
+  rewrite (Hsum_hi_block a b Hpa Hpb).
+  replace (seq (length a + S (length b)) 1)
+    with ((length a + S (length b)) :: nil) by reflexivity.
+  rewrite (nfold_single nat (Hu (midmax a b) (length a + S (length b)))
+             (length a + S (length b))).
+  cbn beta. rewrite Hu_top. lia.
+Qed.
+
+Theorem Bsum_lo_block : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  fold_right (fun y acc =>
+    (Bin (midmax a b) (length a + S (length b)) y + acc)%nat) 0%nat
+    (seq 1 (length b))
+  = (Bwp b (length b)
+     + (length a + 1) * pairge (safelist b (length b))
+     + length (safelist b (length b))
+       * (length a * length b + Awp a (length a)
+          + (length a + S (length b))))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  transitivity (fold_right (fun y acc =>
+      (Bin b (length b) y
+       + (if safeb b y
+          then ((length a + 1) * cntge (safelist b (length b)) y
+                + (length a * length b + Awp a (length a)
+                   + (length a + S (length b))))%nat
+          else 0)
+       + acc)%nat) 0%nat (seq 1 (length b))).
+  - apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+    destruct (safeb b y) eqn:Es.
+    + assert (Hs : safe_at b y) by (apply safeb_spec; exact Es).
+      rewrite (Bin_lo_safe a b y Hpa Hpb ltac:(lia) ltac:(lia) Hs). lia.
+    + assert (Hns : ~ safe_at b y).
+      { intro C. assert (K : safeb b y = true) by (apply safeb_spec; exact C).
+        rewrite Es in K. discriminate. }
+      rewrite (Bin_lo_unsafe a b y Hpa Hpb ltac:(lia) ltac:(lia) Hns). lia.
+  - rewrite (fold_add_split nat (fun y => Bin b (length b) y)
+               (fun y => if safeb b y
+                         then ((length a + 1) * cntge (safelist b (length b)) y
+                               + (length a * length b + Awp a (length a)
+                                  + (length a + S (length b))))%nat
+                         else 0) (seq 1 (length b))).
+    cbn beta.
+    rewrite (nfold_filter nat (safeb b)
+               (fun y => ((length a + 1) * cntge (safelist b (length b)) y
+                          + (length a * length b + Awp a (length a)
+                             + (length a + S (length b))))%nat)
+               (seq 1 (length b))).
+    change (filter (safeb b) (seq 1 (length b)))
+      with (safelist b (length b)).
+    rewrite (fold_add_split nat
+               (fun y => ((length a + 1)
+                          * cntge (safelist b (length b)) y)%nat)
+               (fun _ : nat => (length a * length b + Awp a (length a)
+                                + (length a + S (length b)))%nat)
+               (safelist b (length b))).
+    cbn beta.
+    rewrite (nfold_scal nat (length a + 1)
+               (cntge (safelist b (length b))) (safelist b (length b))).
+    rewrite (nfold_const nat (length a * length b + Awp a (length a)
+                              + (length a + S (length b)))
+               (safelist b (length b))).
+    unfold Bwp, pairge. lia.
+Qed.
+
+Theorem Bw_midmax : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  Bw (midmax a b) (length a + S (length b))
+  = (Aw (midmax a b) (length a + S (length b))
+     + Bwp b (length b)
+     + (length a + 1) * pairge (safelist b (length b))
+     + length (safelist b (length b))
+       * (length a * length b + Awp a (length a)
+          + (length a + S (length b)))
+     + length b * Lsum a (length a) + Bwp a (length a)
+     + (length a + S (length b)))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  assert (Etop : Bin (midmax a b) (length a + S (length b))
+                     (length a + S (length b)) = (length a + S (length b))%nat).
+  { unfold Bin. rewrite Hu_top.
+    replace (length a + S (length b) - (length a + S (length b))) with 0 by lia.
+    replace (seq (length a + S (length b)) 1)
+      with ((length a + S (length b)) :: nil) by reflexivity.
+    cbn [fold_right]. rewrite Hu_top. lia. }
+  unfold Bw. rewrite (seq_split_three (length a) (length b)).
+  rewrite !(nfold_app nat (Bin (midmax a b) (length a + S (length b)))).
+  replace (seq 0 1) with (0 :: nil) by reflexivity.
+  replace (seq (length a + S (length b)) 1)
+    with ((length a + S (length b)) :: nil) by reflexivity.
+  rewrite !(nfold_single nat (Bin (midmax a b) (length a + S (length b)))).
+  rewrite (Bin_zero (midmax a b) (length a + S (length b))).
+  rewrite (Bsum_lo_block a b Hpa Hpb), (Bsum_hi_block a b Hpa Hpb), Etop.
+  lia.
+Qed.
+
