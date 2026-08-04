@@ -1899,3 +1899,9 @@ Print Assumptions bb_Xa.
 Print Assumptions domino_5.
 Print Assumptions tromino_5.
 Print Assumptions chebyshev_le_5.
+
+(* ---- the subtree blocks of the second-order level sum ---- *)
+Print Assumptions bb_XL.
+Print Assumptions bb_YL.
+Print Assumptions bb_B8_val.
+Print Assumptions bb_B9_val.

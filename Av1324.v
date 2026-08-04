@@ -24459,3 +24459,90 @@ Proof.
   assert (Z := bb_Xa m).
   nia.
 Qed.
+
+(* The subtree blocks of the second-order level sum. *)
+
+
+Lemma bb_XL : forall m,
+  (2 * conv Ltot sctot m + (m + 3) * card132 (S (S m))
+   = 2 * 4 ^ m + 2 * (m + 2) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := conv_Ltot_sctot m).
+  assert (S1 := wsum_S_sym m).
+  assert (S2 := wsum_S_sym (S m)).
+  assert (V1 := Aconv_val m).
+  assert (V2 := Aconv_val (S m)).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  assert (E2 : (4 ^ (S (S m)) = 16 * 4 ^ m)%nat) by (simpl; ring).
+  lia.
+Qed.
+
+Lemma bb_YL : forall m,
+  (4 * conv (fun k => (k * Ltot k)%nat) sctot m
+   + (3 * m * m + 15 * m + 18) * card132 (S (S m))
+   = (4 * m + 26) * 4 ^ m
+     + (5 * m * m + 15 * m + 10) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := conv_kLtot_sctot m).
+  assert (K1 := wsum_kSk_val m).
+  assert (K2 := wsum_kSk_val (S m)).
+  assert (B1 := Bconv_c1 m).
+  assert (B2 := Bconv_c1 (S m)).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  lia.
+Qed.
+
+Lemma bb_B9a : forall m,
+  (8 * conv Bwptot sctot m + 6 * (m + 2) * (m + 2) * card132 (S m)
+   + (8 * m + 24) * 4 ^ m + 4 * Aconv (S m) + 2 * Bconv m
+   = 2 * (m + 3) * (m + 3) * card132 (S (S m)) + 2 * Bconv (S m)
+     + 20 * 4 ^ m + 4 * Aconv m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB9_val m).
+  assert (W1 := wsum_SkSk_val m).
+  assert (W2 := wsum_SkSk_val (S m)).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma bb_B9b : forall m,
+  (8 * conv Bwptot sctot m + 6 * (m + 2) * (m + 2) * card132 (S m)
+   + 2 * (m + 2) * card132 (S m) + (8 * m + 56) * 4 ^ m + 2 * Bconv m
+   = 2 * (m + 3) * (m + 3) * card132 (S (S m))
+     + 2 * (m + 3) * card132 (S (S m)) + 2 * Bconv (S m) + 28 * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := bb_B9a m).
+  assert (V1 := Aconv_val m).
+  assert (V2 := Aconv_val (S m)).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  assert (E2 : (4 ^ (S (S m)) = 16 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma bb_B9_val : forall m,
+  (2 * conv Bwptot sctot m + (m + 2) * (m + 3) * card132 (S m)
+   = m * 4 ^ m + (m + 3) * card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (A := bb_B9b m).
+  assert (B1 := Bconv_c1 m).
+  assert (B2 := Bconv_c1 (S m)).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma bb_B8_val : forall m,
+  (4 * conv Ltot (fun n => (n * sctot n)%nat) m + 26 * 4 ^ m
+   + (m + 2) * (m + 5) * card132 (S m)
+   = (m + 3) * (m + 6) * card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB8 m).
+  assert (X := bb_XL m).
+  assert (Y := bb_YL m).
+  nia.
+Qed.
