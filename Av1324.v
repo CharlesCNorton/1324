@@ -20828,3 +20828,143 @@ Qed.
 Definition diagonal_three_closed : Diagonal 3 :=
   diagonal_three_of_stats Btot_closed Ctot_closed.
 
+
+(* ------------------------------------------------------------------ *)
+(* Polynomial weights against the central binomial convolutions. *)
+
+
+(* The two convolutions of the central binomials: against themselves they give
+   the powers of four, against the powers of four they give back the central
+   binomials.  Both carry polynomial weights, by one shift recurrence each. *)
+
+Lemma bsum_shift : forall w n,
+  bsum (fun j => (j * w (j - 1))%nat) (S n)
+  = (4 * bsum (fun k => (k * w k)%nat) n + 2 * bsum w n)%nat.
+Proof.
+  intros w n.
+  assert (E : bsum (fun j => (j * w (j - 1))%nat) (S n)
+            = bsum (fun k => ((4 * k + 2) * w k)%nat) n).
+  { unfold bsum. cbn beta.
+    change (seq 0 (S (S n))) with (0%nat :: seq 1 (S n)).
+    rewrite (nfold_cons nat
+      (fun j => (j * w (j - 1) * (cb j * cb (S n - j)))%nat) 0%nat
+      (seq 1 (S n))).
+    cbn beta.
+    replace (0 * w (0 - 1) * (cb 0 * cb (S n - 0)))%nat with 0%nat by lia.
+    rewrite Nat.add_0_l.
+    rewrite <- (seq_shift (S n) 0).
+    rewrite (nfold_map_gen nat nat
+      (fun j => (j * w (j - 1) * (cb j * cb (S n - j)))%nat) S (seq 0 (S n))).
+    apply nfold_ext_in. intros k Hk. apply in_seq in Hk. cbn beta.
+    replace (S n - S k)%nat with (n - k)%nat by lia.
+    replace (S k - 1)%nat with k by lia.
+    assert (R := cbi_ratio k).
+    transitivity (w k * (S k * cb (S k)) * cb (n - k))%nat; [ring|].
+    rewrite R. ring. }
+  rewrite E.
+  rewrite <- (bsum_scal 4 (fun k => (k * w k)%nat) n).
+  rewrite <- (bsum_scal 2 w n).
+  rewrite (bsum_add (fun k => (4 * (k * w k))%nat) (fun k => (2 * w k)%nat) n).
+  apply bsum_ext. intros k _. ring.
+Qed.
+
+Lemma bsum_id_val : forall m, (2 * bsum (fun k => k) m = m * 4 ^ m)%nat.
+Proof.
+  intro m. assert (H := pconv1_sym m). unfold pconv1 in H.
+  rewrite (pconv_pow m) in H. exact H.
+Qed.
+
+Lemma bsum_sq_val : forall m,
+  (8 * bsum (fun k => (k * k)%nat) m = m * (3 * m + 1) * 4 ^ m)%nat.
+Proof.
+  induction m as [|n IH]; [reflexivity|].
+  assert (S1 := bsum_shift (fun k => k) n). cbn beta in S1.
+  assert (E : (bsum (fun j => (j * (j - 1))%nat) (S n)
+               + bsum (fun k => k) (S n))%nat
+            = bsum (fun k => (k * k)%nat) (S n)).
+  { rewrite (bsum_add (fun j => (j * (j - 1))%nat) (fun k => k) (S n)).
+    apply bsum_ext. intros k _. destruct k as [|k]; [reflexivity|].
+    replace (S k - 1)%nat with k by lia. ring. }
+  assert (A := bsum_id_val n).
+  assert (B := bsum_id_val (S n)).
+  replace (4 ^ S n)%nat with (4 * 4 ^ n)%nat in B by (cbn [Nat.pow]; ring).
+  replace (4 ^ S n)%nat with (4 * 4 ^ n)%nat by (cbn [Nat.pow]; ring).
+  nia.
+Qed.
+
+Lemma bsum_kmk_val : forall m,
+  (8 * bsum (fun k => (k * (m - k))%nat) m + m * (3 * m + 1) * 4 ^ m
+   = 4 * m * (m * 4 ^ m))%nat.
+Proof.
+  intro m.
+  assert (E : (bsum (fun k => (k * (m - k))%nat) m
+               + bsum (fun k => (k * k)%nat) m)%nat
+            = bsum (fun k => (m * k)%nat) m).
+  { rewrite (bsum_add (fun k => (k * (m - k))%nat) (fun k => (k * k)%nat) m).
+    apply bsum_ext. intros k Hk.
+    remember (m - k)%nat as d eqn:Ed.
+    assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring. }
+  rewrite (bsum_scal m (fun k => k) m) in E.
+  assert (A := bsum_id_val m).
+  assert (B := bsum_sq_val m).
+  nia.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+
+Definition esum (w : nat -> nat) (m : nat) : nat :=
+  fold_right (fun k acc => (w k * (cb k * 4 ^ (m - k)) + acc)%nat) 0%nat
+             (seq 0 (S m)).
+
+Lemma esum_rec : forall w n,
+  esum w (S n) = (4 * esum w n + w (S n) * cb (S n))%nat.
+Proof.
+  intros w n. unfold esum at 1. rewrite (seq_snoc (S n) 0).
+  rewrite (nfold_app nat (fun k => (w k * (cb k * 4 ^ (S n - k)))%nat)).
+  rewrite (nfold_single nat (fun k => (w k * (cb k * 4 ^ (S n - k)))%nat)
+             (0 + S n)).
+  cbn beta.
+  replace (0 + S n)%nat with (S n) by lia.
+  rewrite Nat.sub_diag. change (4 ^ 0)%nat with 1%nat.
+  unfold esum.
+  rewrite <- (nfold_scal nat 4 (fun k => (w k * (cb k * 4 ^ (n - k)))%nat)
+                (seq 0 (S n))).
+  f_equal; [|ring].
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+  replace (S n - k)%nat with (S (n - k)) by lia.
+  cbn [Nat.pow]. ring.
+Qed.
+
+Lemma esum_ext : forall w1 w2 m,
+  (forall k, (k <= m)%nat -> w1 k = w2 k) -> esum w1 m = esum w2 m.
+Proof.
+  intros w1 w2 m H. unfold esum. apply nfold_ext_in.
+  intros k Hk. apply in_seq in Hk. rewrite (H k ltac:(lia)). reflexivity.
+Qed.
+
+Lemma esum_one : forall m,
+  esum (fun _ => 1%nat) m = ((2 * m + 1) * cb m)%nat.
+Proof.
+  induction m as [|n IH]; [reflexivity|].
+  rewrite (esum_rec (fun _ => 1%nat) n), IH.
+  assert (R := cbi_ratio n). nia.
+Qed.
+
+Lemma esum_id_val : forall m,
+  (3 * esum (fun k => k) m = m * (2 * m + 1) * cb m)%nat.
+Proof.
+  induction m as [|n IH]; [reflexivity|].
+  rewrite (esum_rec (fun k => k) n).
+  assert (R := cbi_ratio n). nia.
+Qed.
+
+(* the classical form: sum of 4^(m-k) C(2k,k) is (2m+1) C(2m,m) *)
+Corollary central_pow_conv : forall m,
+  fold_right (fun k acc => (4 ^ (m - k) * binomN (2 * k) k + acc)%nat) 0%nat
+             (seq 0 (S m))
+  = ((2 * m + 1) * binomN (2 * m) m)%nat.
+Proof.
+  intro m.
+  assert (E := esum_one m). unfold esum, cb in E. cbn beta in E.
+  rewrite <- E. apply nfold_ext_in. intros k _. cbn beta. ring.
+Qed.

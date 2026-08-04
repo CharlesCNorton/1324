@@ -1621,3 +1621,21 @@ Print Assumptions DDIAG_THREE_CLOSED.
 Compute (map (fun M => ((6 * Ddiag 3 M)%nat,
                         ((M * M + 11 * M + 21) * binomN (2 * M) M
                          + (3 * M + 15) * 4 ^ M)%nat)) (seq 0 5)).
+
+(* ---- polynomial weights against the central binomial convolutions ---- *)
+Print Assumptions bsum_shift.
+Print Assumptions bsum_id_val.
+Print Assumptions bsum_sq_val.
+Print Assumptions bsum_kmk_val.
+Print Assumptions esum_rec.
+Print Assumptions esum_one.
+Print Assumptions esum_id_val.
+Print Assumptions central_pow_conv.
+(* sum of 4^(m-k) C(2k,k) = (2m+1) C(2m,m) *)
+Compute (map (fun m => (fold_right (fun k acc =>
+                          (4 ^ (m - k) * binomN (2 * k) k + acc)%nat) 0%nat
+                          (seq 0 (S m)),
+                        ((2 * m + 1) * binomN (2 * m) m)%nat)) (seq 0 7)).
+(* the weighted central-binomial self-convolutions *)
+Compute (map (fun m => ((8 * bsum (fun k => (k * k)%nat) m)%nat,
+                        (m * (3 * m + 1) * 4 ^ m)%nat)) (seq 0 4)).
