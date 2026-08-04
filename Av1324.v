@@ -23451,3 +23451,161 @@ Proof.
   replace (S c' - 1)%nat with c' in K by lia.
   nia.
 Qed.
+
+(* The level sum of the second-order subtree statistic. *)
+
+
+Definition BBwptot (M : nat) : nat :=
+  fold_right (fun u acc => (BBwp u M + acc)%nat) 0%nat (gen132 M).
+
+Definition GGwptot (M : nat) : nat :=
+  fold_right (fun u acc => (GGwp u M + acc)%nat) 0%nat (gen132 M).
+
+Lemma BBw_split : forall u M, BBw u M = (Bw u M + BBwp u M)%nat.
+Proof.
+  intros u M. unfold BBw, BBwp.
+  change (seq 0 (S M)) with (0%nat :: seq 1 M).
+  rewrite (nfold_cons nat (BBin u M) 0%nat (seq 1 M)).
+  rewrite (BBin_root u M). reflexivity.
+Qed.
+
+Corollary BBwp_midmax : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  BBwp (midmax a b) (length a + S (length b))
+  = (BBwp b (length b)
+     + (length a + 1) * TRIPw b (length b)
+     + (length a * length b + Awp a (length a)
+        + (length a + S (length b))) * pairge (safelist b (length b))
+     + length (safelist b (length b))
+       * (length b * Lsum a (length a) + Bwp a (length a)
+          + (length a + S (length b)))
+     + length b * (GGwp a (length a) + Lsum a (length a))
+     + BBwp a (length a)
+     + (length a + S (length b)))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  assert (K := BBw_midmax a b Hpa Hpb).
+  rewrite (BBw_split (midmax a b) (length a + S (length b))) in K.
+  lia.
+Qed.
+
+Theorem BBwptot_expand : forall m,
+  BBwptot (S m)
+  = fold_right (fun k acc =>
+      (card132 k * (BBwptot (m - k) + (k + 1) * TRIPtot (m - k)
+                    + k * (m - k) * Ptot (m - k) + S m * Ptot (m - k)
+                    + sctot (m - k) * S m + card132 (m - k) * S m)
+       + Awptot k * Ptot (m - k)
+       + sctot (m - k) * ((m - k) * Ltot k)
+       + sctot (m - k) * Bwptot k
+       + card132 (m - k) * ((m - k) * GGwptot k)
+       + card132 (m - k) * ((m - k) * Ltot k)
+       + card132 (m - k) * BBwptot k
+       + acc)%nat) 0%nat (seq 0 (S m)).
+Proof.
+  intro m. unfold BBwptot at 1.
+  rewrite (nfold_pairs132 m (fun w => BBwp w (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk. destruct Hk as [_ Hk].
+  assert (HkM : (k <= m)%nat) by lia.
+  transitivity (fold_right (fun a acc =>
+      ((BBwptot (m - k) + (k + 1) * TRIPtot (m - k)
+        + k * (m - k) * Ptot (m - k) + S m * Ptot (m - k)
+        + sctot (m - k) * S m + card132 (m - k) * S m)
+       + Awp a k * Ptot (m - k)
+       + sctot (m - k) * ((m - k) * Lsum a k)
+       + sctot (m - k) * Bwp a k
+       + card132 (m - k) * ((m - k) * GGwp a k)
+       + card132 (m - k) * ((m - k) * Lsum a k)
+       + card132 (m - k) * BBwp a k
+       + acc)%nat) 0%nat (gen132 k)).
+  - apply nfold_ext_in. intros a Ha.
+    assert (Hpa0 : is_perm a k) by (apply gen132_perm; exact Ha).
+    assert (Hla : length a = k) by (apply (perm_len a k); exact Hpa0).
+    assert (Hpa : is_perm a (length a)) by (rewrite Hla; exact Hpa0).
+    transitivity (fold_right (fun v acc =>
+        (BBwp v (m - k) + (k + 1) * TRIPw v (m - k)
+         + (k * (m - k) + Awp a k + S m) * pairge (safelist v (m - k))
+         + length (safelist v (m - k))
+           * ((m - k) * Lsum a k + Bwp a k + S m)
+         + ((m - k) * (GGwp a k + Lsum a k) + BBwp a k + S m)
+         + acc)%nat) 0%nat (gen132 (m - k))).
+    + apply nfold_ext_in. intros v Hv.
+      assert (Hpv0 : is_perm v (m - k)) by (apply gen132_perm; exact Hv).
+      assert (Hlv : length v = (m - k)%nat)
+        by (apply (perm_len v (m - k)); exact Hpv0).
+      assert (Hpv : is_perm v (length v)) by (rewrite Hlv; exact Hpv0).
+      assert (K := BBwp_midmax a v Hpa Hpv).
+      rewrite Hla, Hlv in K.
+      replace (k + S (m - k))%nat with (S m) in K by lia.
+      rewrite K. lia.
+    + rewrite (nfold_five (list nat) (fun v => BBwp v (m - k))
+                 (fun v => ((k + 1) * TRIPw v (m - k))%nat)
+                 (fun v => ((k * (m - k) + Awp a k + S m)
+                            * pairge (safelist v (m - k)))%nat)
+                 (fun v => (length (safelist v (m - k))
+                            * ((m - k) * Lsum a k + Bwp a k + S m))%nat)
+                 (fun _ : list nat =>
+                    ((m - k) * (GGwp a k + Lsum a k) + BBwp a k + S m)%nat)
+                 (gen132 (m - k))).
+      cbn beta.
+      rewrite (nfold_scal (list nat) (k + 1) (fun v => TRIPw v (m - k))
+                 (gen132 (m - k))).
+      rewrite (nfold_scal (list nat) (k * (m - k) + Awp a k + S m)
+                 (fun v => pairge (safelist v (m - k))) (gen132 (m - k))).
+      assert (Esw : fold_right (fun v acc =>
+          (length (safelist v (m - k)) * ((m - k) * Lsum a k + Bwp a k + S m)
+           + acc)%nat) 0%nat (gen132 (m - k))
+        = fold_right (fun v acc =>
+            (((m - k) * Lsum a k + Bwp a k + S m)
+             * length (safelist v (m - k)) + acc)%nat) 0%nat
+            (gen132 (m - k)))
+        by (apply nfold_ext_in; intros v _; ring).
+      rewrite Esw.
+      rewrite (nfold_scal (list nat)
+                 ((m - k) * Lsum a k + Bwp a k + S m)
+                 (fun v => length (safelist v (m - k))) (gen132 (m - k))).
+      rewrite (nfold_const (list nat)
+                 ((m - k) * (GGwp a k + Lsum a k) + BBwp a k + S m)
+                 (gen132 (m - k))).
+      unfold BBwptot, TRIPtot, Ptot, sctot, card132, safelist. nia.
+  - rewrite (nfold_seven (list nat)
+      (fun _ : list nat =>
+         (BBwptot (m - k) + (k + 1) * TRIPtot (m - k)
+          + k * (m - k) * Ptot (m - k) + S m * Ptot (m - k)
+          + sctot (m - k) * S m + card132 (m - k) * S m)%nat)
+      (fun a => (Awp a k * Ptot (m - k))%nat)
+      (fun a => (sctot (m - k) * ((m - k) * Lsum a k))%nat)
+      (fun a => (sctot (m - k) * Bwp a k)%nat)
+      (fun a => (card132 (m - k) * ((m - k) * GGwp a k))%nat)
+      (fun a => (card132 (m - k) * ((m - k) * Lsum a k))%nat)
+      (fun a => (card132 (m - k) * BBwp a k)%nat) (gen132 k)).
+    cbn beta.
+    rewrite (nfold_const (list nat)
+               (BBwptot (m - k) + (k + 1) * TRIPtot (m - k)
+                + k * (m - k) * Ptot (m - k) + S m * Ptot (m - k)
+                + sctot (m - k) * S m + card132 (m - k) * S m) (gen132 k)).
+    assert (E1 : fold_right (fun a acc => (Awp a k * Ptot (m - k) + acc)%nat)
+                   0%nat (gen132 k)
+      = (Awptot k * Ptot (m - k))%nat).
+    { transitivity (fold_right (fun a acc =>
+          (Ptot (m - k) * Awp a k + acc)%nat) 0%nat (gen132 k)).
+      - apply nfold_ext_in. intros a _. ring.
+      - rewrite (nfold_scal (list nat) (Ptot (m - k)) (fun a => Awp a k)
+                   (gen132 k)).
+        unfold Awptot. ring. }
+    rewrite E1.
+    rewrite (nfold_scal (list nat) (sctot (m - k))
+               (fun a => ((m - k) * Lsum a k)%nat) (gen132 k)).
+    rewrite (nfold_scal (list nat) (m - k) (fun a => Lsum a k) (gen132 k)).
+    rewrite (nfold_scal (list nat) (sctot (m - k)) (fun a => Bwp a k)
+               (gen132 k)).
+    rewrite (nfold_scal (list nat) (card132 (m - k))
+               (fun a => ((m - k) * GGwp a k)%nat) (gen132 k)).
+    rewrite (nfold_scal (list nat) (m - k) (fun a => GGwp a k) (gen132 k)).
+    rewrite (nfold_scal (list nat) (card132 (m - k))
+               (fun a => ((m - k) * Lsum a k)%nat) (gen132 k)).
+    rewrite (nfold_scal (list nat) (m - k) (fun a => Lsum a k) (gen132 k)).
+    rewrite (nfold_scal (list nat) (card132 (m - k)) (fun a => BBwp a k)
+               (gen132 k)).
+    unfold BBwptot, GGwptot, Ltot, Bwptot, card132. nia.
+Qed.

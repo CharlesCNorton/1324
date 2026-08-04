@@ -1815,3 +1815,8 @@ Print Assumptions TRIPtot_closed.
 (* 6 TRIPtot n + Cat(n+1) = sccube n *)
 Compute (map (fun n => ((6 * TRIPtot n + card132 (S n))%nat, sccube n))
              (seq 0 4)).
+
+(* ---- the level sum of the second-order subtree statistic ---- *)
+Print Assumptions BBw_split.
+Print Assumptions BBwp_midmax.
+Print Assumptions BBwptot_expand.
