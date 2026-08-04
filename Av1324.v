@@ -21901,3 +21901,127 @@ Proof.
   apply nfold_ext_in. intros u _. apply GGw_split.
 Qed.
 
+
+(* The position-weighted statistics reduce to the sum of y H(y). *)
+
+
+(* The two position-weighted statistics reduce to one: the sum of y H(y). *)
+
+Definition Sq (M : nat) : nat :=
+  fold_right (fun y acc => (y * y + acc)%nat) 0%nat (seq 0 (S M)).
+
+Lemma Sq_val : forall M, (6 * Sq M = M * (M + 1) * (2 * M + 1))%nat.
+Proof.
+  induction M as [|m IH]; [reflexivity|].
+  assert (E : Sq (S m) = (Sq m + S m * S m)%nat).
+  { unfold Sq at 1. rewrite (seq_snoc (S m) 0).
+    rewrite (nfold_app nat (fun y => (y * y)%nat)).
+    rewrite (nfold_single nat (fun y => (y * y)%nat) (0 + S m)).
+    cbn beta. replace (0 + S m)%nat with (S m) by lia. reflexivity. }
+  rewrite E. nia.
+Qed.
+
+Definition YHw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (y * Hu u M y + acc)%nat) 0%nat (seq 0 (S M)).
+
+Definition Hsq0 (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (Hu u M y * Hu u M y + acc)%nat) 0%nat
+             (seq 0 (S M)).
+
+Lemma Hsq0_split : forall u M, Hsq0 u M = (M * M + Hsq u M)%nat.
+Proof.
+  intros u M. unfold Hsq0, Hsq.
+  change (seq 0 (S M)) with (0%nat :: seq 1 M).
+  rewrite (nfold_cons nat (fun y => (Hu u M y * Hu u M y)%nat) 0%nat
+             (seq 1 M)).
+  rewrite (Hu_zero u M). reflexivity.
+Qed.
+
+Lemma Yw_YH : forall u M, (Yw u M + Sq M = YHw u M + tri M)%nat.
+Proof.
+  intros u M. unfold Yw, Sq, YHw, tri.
+  rewrite <- (fold_add_split nat (fun y => (y * S (hgap u M y))%nat)
+                (fun y => (y * y)%nat) (seq 0 (S M))).
+  rewrite <- (fold_add_split nat (fun y => (y * Hu u M y)%nat) (fun y => y)
+                (seq 0 (S M))).
+  apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+  assert (Hg : y <= Hu u M y) by (apply Hu_ge; lia).
+  unfold hgap. nia.
+Qed.
+
+Lemma Tw_YH : forall u M,
+  (2 * Tw u M + 2 * YHw u M = Hsq0 u M + Sq M + Lsum u M)%nat.
+Proof.
+  intros u M. unfold Tw, YHw, Hsq0, Sq, Lsum.
+  rewrite <- (nfold_scal nat 2 (fun y => tri (hgap u M y)) (seq 0 (S M))).
+  rewrite <- (nfold_scal nat 2 (fun y => (y * Hu u M y)%nat) (seq 0 (S M))).
+  rewrite <- (fold_add_split nat (fun y => (2 * tri (hgap u M y))%nat)
+                (fun y => (2 * (y * Hu u M y))%nat) (seq 0 (S M))).
+  rewrite <- (nfold_three nat (fun y => (Hu u M y * Hu u M y)%nat)
+                (fun y => (y * y)%nat) (hgap u M) (seq 0 (S M))).
+  apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+  assert (Hg : y <= Hu u M y) by (apply Hu_ge; lia).
+  unfold hgap.
+  remember (Hu u M y - y)%nat as g eqn:Eg.
+  assert (EH : Hu u M y = (y + g)%nat) by lia.
+  assert (Ht := tri_val g).
+  rewrite EH. nia.
+Qed.
+
+Definition YHtot (M : nat) : nat :=
+  fold_right (fun u acc => (YHw u M + acc)%nat) 0%nat (gen132 M).
+
+Definition Hsq0tot (M : nat) : nat :=
+  fold_right (fun u acc => (Hsq0 u M + acc)%nat) 0%nat (gen132 M).
+
+Lemma Hsq0tot_split : forall M,
+  Hsq0tot M = (card132 M * (M * M) + Hsqtot M)%nat.
+Proof.
+  intro M. unfold Hsq0tot, Hsqtot.
+  transitivity (fold_right (fun u acc => (M * M + Hsq u M + acc)%nat) 0%nat
+                           (gen132 M)).
+  - apply nfold_ext_in. intros u _. apply Hsq0_split.
+  - rewrite (fold_add_split (list nat) (fun _ : list nat => (M * M)%nat)
+               (fun u => Hsq u M) (gen132 M)).
+    cbn beta. rewrite (nfold_const (list nat) (M * M) (gen132 M)).
+    unfold card132. ring.
+Qed.
+
+Lemma Ytot_YH : forall M,
+  (Ytot M + card132 M * Sq M = YHtot M + card132 M * tri M)%nat.
+Proof.
+  intro M. unfold Ytot, YHtot.
+  assert (E1 : (card132 M * Sq M)%nat
+    = fold_right (fun (_ : list nat) (acc : nat) => (Sq M + acc)%nat) 0%nat
+                 (gen132 M)).
+  { rewrite (nfold_const (list nat) (Sq M) (gen132 M)). unfold card132. ring. }
+  assert (E2 : (card132 M * tri M)%nat
+    = fold_right (fun (_ : list nat) (acc : nat) => (tri M + acc)%nat) 0%nat
+                 (gen132 M)).
+  { rewrite (nfold_const (list nat) (tri M) (gen132 M)). unfold card132. ring. }
+  rewrite E1, E2.
+  rewrite <- (fold_add_split (list nat) (fun u => Yw u M)
+                (fun _ : list nat => Sq M) (gen132 M)).
+  rewrite <- (fold_add_split (list nat) (fun u => YHw u M)
+                (fun _ : list nat => tri M) (gen132 M)).
+  apply nfold_ext_in. intros u _. apply Yw_YH.
+Qed.
+
+Lemma Ttot_YH : forall M,
+  (2 * Ttot M + 2 * YHtot M
+   = Hsq0tot M + card132 M * Sq M + Ltot M)%nat.
+Proof.
+  intro M. unfold Ttot, YHtot, Hsq0tot, Ltot.
+  assert (E1 : (card132 M * Sq M)%nat
+    = fold_right (fun (_ : list nat) (acc : nat) => (Sq M + acc)%nat) 0%nat
+                 (gen132 M)).
+  { rewrite (nfold_const (list nat) (Sq M) (gen132 M)). unfold card132. ring. }
+  rewrite E1.
+  rewrite <- (nfold_scal (list nat) 2 (fun u => Tw u M) (gen132 M)).
+  rewrite <- (nfold_scal (list nat) 2 (fun u => YHw u M) (gen132 M)).
+  rewrite <- (fold_add_split (list nat) (fun u => (2 * Tw u M)%nat)
+                (fun u => (2 * YHw u M)%nat) (gen132 M)).
+  rewrite <- (nfold_three (list nat) (fun u => Hsq0 u M)
+                (fun _ : list nat => Sq M) (fun u => Lsum u M) (gen132 M)).
+  apply nfold_ext_in. intros u _. apply Tw_YH.
+Qed.

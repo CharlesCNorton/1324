@@ -1698,3 +1698,12 @@ Print Assumptions Ddiag_four_stats.
 Print Assumptions GGin_split.
 Print Assumptions GGw_split.
 Print Assumptions GGtot_split.
+
+(* ---- the position-weighted statistics ---- *)
+Print Assumptions Sq_val.
+Print Assumptions Hsq0_split.
+Print Assumptions Yw_YH.
+Print Assumptions Tw_YH.
+Print Assumptions Hsq0tot_split.
+Print Assumptions Ytot_YH.
+Print Assumptions Ttot_YH.
