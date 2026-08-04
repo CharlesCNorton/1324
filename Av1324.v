@@ -21571,3 +21571,171 @@ Proof.
     cbn beta. unfold Cin, Ein, Bin. lia. }
   rewrite EA1, EA2, EC. lia.
 Qed.
+
+(* The second-order statistics the d = 4 level sum runs into. *)
+
+
+(* The second-order statistics the d = 4 level sum runs into. *)
+
+Definition CCin (u : list nat) (M y : nat) : nat :=
+  fold_right (fun z acc => (Cin u M z + acc)%nat) 0%nat (seq 1 y).
+
+Definition DDin (u : list nat) (M y : nat) : nat :=
+  fold_right (fun z acc => (Din u M y z + acc)%nat) 0%nat (seq 1 y).
+
+Definition EEin (u : list nat) (M y : nat) : nat :=
+  fold_right (fun w acc => (Ein u M w y + acc)%nat) 0%nat
+             (seq y (S (Hu u M y - y))).
+
+Definition BBin (u : list nat) (M y : nat) : nat :=
+  fold_right (fun w acc => (Bin u M w + acc)%nat) 0%nat
+             (seq y (S (Hu u M y - y))).
+
+Definition GGin (u : list nat) (M y : nat) : nat :=
+  fold_right (fun w acc => (hgap u M w + acc)%nat) 0%nat
+             (seq y (S (Hu u M y - y))).
+
+Definition CCw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (CCin u M y + acc)%nat) 0%nat (seq 0 (S M)).
+Definition DDw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (DDin u M y + acc)%nat) 0%nat (seq 0 (S M)).
+Definition EEw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (EEin u M y + acc)%nat) 0%nat (seq 0 (S M)).
+Definition BBw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (BBin u M y + acc)%nat) 0%nat (seq 0 (S M)).
+Definition GGw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (GGin u M y + acc)%nat) 0%nat (seq 0 (S M)).
+Definition PCw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (S (hgap u M y) * Cin u M y + acc)%nat) 0%nat
+             (seq 0 (S M)).
+Definition Yw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (y * S (hgap u M y) + acc)%nat) 0%nat
+             (seq 0 (S M)).
+Definition Tw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => (tri (hgap u M y) + acc)%nat) 0%nat (seq 0 (S M)).
+
+Lemma seq_gap_tri : forall a n,
+  fold_right (fun w acc => (w - a + acc)%nat) 0%nat (seq a (S n)) = tri n.
+Proof.
+  intros a n.
+  replace (seq a (S n)) with (map (fun t => t + a) (seq 0 (S n)))
+    by (rewrite seq_add_map; reflexivity).
+  rewrite (nfold_map_gen nat nat (fun w => (w - a)%nat) (fun t => t + a)
+             (seq 0 (S n))).
+  cbn beta.
+  transitivity (fold_right (fun t acc => (t + acc)%nat) 0%nat (seq 0 (S n))).
+  - apply nfold_ext_in. intros t _. lia.
+  - unfold tri. reflexivity.
+Qed.
+
+Lemma Lsum_succ : forall u M,
+  fold_right (fun y acc => (S (hgap u M y) + acc)%nat) 0%nat (seq 0 (S M))
+  = (Lsum u M + S M)%nat.
+Proof.
+  intros u M.
+  transitivity (fold_right (fun y acc => (hgap u M y + 1 + acc)%nat) 0%nat
+                           (seq 0 (S M))).
+  - apply nfold_ext_in. intros y _. lia.
+  - rewrite (fold_add_split nat (hgap u M) (fun _ : nat => 1) (seq 0 (S M))).
+    cbn beta. rewrite (nfold_const nat 1 (seq 0 (S M))), length_seq.
+    unfold Lsum. lia.
+Qed.
+
+Lemma d4stat_B : forall u M y,
+  fold_right (fun z acc =>
+    (6 + 4 * Nat.min y (Hu u M z) + Cin u M z + Din u M y z + acc)%nat) 0%nat
+    (seq 1 y)
+  = (6 * y + 4 * Cin u M y + CCin u M y + DDin u M y)%nat.
+Proof.
+  intros u M y.
+  rewrite (nfold_four nat (fun _ : nat => 6)
+             (fun z => (4 * Nat.min y (Hu u M z))%nat)
+             (fun z => Cin u M z) (fun z => Din u M y z) (seq 1 y)).
+  cbn beta.
+  rewrite (nfold_const nat 6 (seq 1 y)), length_seq.
+  rewrite (nfold_scal nat 4 (fun z => Nat.min y (Hu u M z)) (seq 1 y)).
+  unfold Cin, CCin, DDin. reflexivity.
+Qed.
+
+Lemma d4stat_C : forall u M y,
+  fold_right (fun w acc =>
+    (11 + Hu u M w + 2 * y + Cin u M y + 3 * (w - y) + Ein u M w y
+     + 4 * (Hu u M w - w) + Bin u M w + acc)%nat) 0%nat
+    (seq y (S (Hu u M y - y)))
+  = (11 * S (hgap u M y) + Bin u M y + 2 * (y * S (hgap u M y))
+     + S (hgap u M y) * Cin u M y + 3 * tri (hgap u M y) + EEin u M y
+     + 4 * GGin u M y + BBin u M y)%nat.
+Proof.
+  intros u M y.
+  rewrite (nfold_eight nat (fun _ : nat => 11) (fun w => Hu u M w)
+             (fun _ : nat => (2 * y)%nat) (fun _ : nat => Cin u M y)
+             (fun w => (3 * (w - y))%nat) (fun w => Ein u M w y)
+             (fun w => (4 * (Hu u M w - w))%nat) (fun w => Bin u M w)
+             (seq y (S (Hu u M y - y)))).
+  cbn beta.
+  rewrite (nfold_const nat 11 (seq y (S (Hu u M y - y)))), length_seq.
+  rewrite (nfold_const nat (2 * y) (seq y (S (Hu u M y - y)))), length_seq.
+  rewrite (nfold_const nat (Cin u M y) (seq y (S (Hu u M y - y)))), length_seq.
+  rewrite (nfold_scal nat 3 (fun w => (w - y)%nat)
+             (seq y (S (Hu u M y - y)))).
+  rewrite (nfold_scal nat 4 (fun w => (Hu u M w - w)%nat)
+             (seq y (S (Hu u M y - y)))).
+  rewrite (seq_gap_tri y (Hu u M y - y)).
+  cbn beta. unfold BBin, EEin, GGin, Bin, hgap. lia.
+Qed.
+
+Lemma d4stat_sum : forall M u,
+  fold_right (fun y acc => (d4stat u M y + acc)%nat) 0%nat (seq 0 (S M))
+  = (23 * S M + 2 * Aw u M + 9 * tri M + 15 * Lsum u M + 5 * Cw u M
+     + 2 * Bw u M + CCw u M + DDw u M + 2 * Yw u M + PCw u M + 3 * Tw u M
+     + EEw u M + 4 * GGw u M + BBw u M)%nat.
+Proof.
+  intros M u.
+  transitivity (fold_right (fun y acc =>
+      ((12 + 2 * Hu u M y + 3 * y + 4 * hgap u M y + Cin u M y + Bin u M y)
+       + (6 * y + 4 * Cin u M y + CCin u M y + DDin u M y)
+       + (11 * S (hgap u M y) + Bin u M y + 2 * (y * S (hgap u M y))
+          + S (hgap u M y) * Cin u M y + 3 * tri (hgap u M y) + EEin u M y
+          + 4 * GGin u M y + BBin u M y)
+       + acc)%nat) 0%nat (seq 0 (S M))).
+  - apply nfold_ext_in. intros y _.
+    unfold d4stat. rewrite (d4stat_B u M y), (d4stat_C u M y).
+    unfold hgap. lia.
+  - rewrite (nfold_three nat
+      (fun y => (12 + 2 * Hu u M y + 3 * y + 4 * hgap u M y + Cin u M y
+                 + Bin u M y)%nat)
+      (fun y => (6 * y + 4 * Cin u M y + CCin u M y + DDin u M y)%nat)
+      (fun y => (11 * S (hgap u M y) + Bin u M y + 2 * (y * S (hgap u M y))
+                 + S (hgap u M y) * Cin u M y + 3 * tri (hgap u M y)
+                 + EEin u M y + 4 * GGin u M y + BBin u M y)%nat)
+      (seq 0 (S M))).
+    cbn beta.
+    rewrite (nfold_six nat (fun _ : nat => 12) (fun y => (2 * Hu u M y)%nat)
+               (fun y => (3 * y)%nat) (fun y => (4 * hgap u M y)%nat)
+               (fun y => Cin u M y) (fun y => Bin u M y) (seq 0 (S M))).
+    rewrite (nfold_four nat (fun y => (6 * y)%nat)
+               (fun y => (4 * Cin u M y)%nat)
+               (fun y => CCin u M y) (fun y => DDin u M y) (seq 0 (S M))).
+    rewrite (nfold_eight nat (fun y => (11 * S (hgap u M y))%nat)
+               (fun y => Bin u M y) (fun y => (2 * (y * S (hgap u M y)))%nat)
+               (fun y => (S (hgap u M y) * Cin u M y)%nat)
+               (fun y => (3 * tri (hgap u M y))%nat) (fun y => EEin u M y)
+               (fun y => (4 * GGin u M y)%nat) (fun y => BBin u M y)
+               (seq 0 (S M))).
+    cbn beta.
+    rewrite (nfold_const nat 12 (seq 0 (S M))), length_seq.
+    rewrite (nfold_scal nat 2 (fun y => Hu u M y) (seq 0 (S M))).
+    rewrite (nfold_scal nat 3 (fun y => y) (seq 0 (S M))).
+    rewrite (nfold_scal nat 4 (fun y => hgap u M y) (seq 0 (S M))).
+    rewrite (nfold_scal nat 6 (fun y => y) (seq 0 (S M))).
+    rewrite (nfold_scal nat 4 (fun y => Cin u M y) (seq 0 (S M))).
+    rewrite (nfold_scal nat 11 (fun y => S (hgap u M y)) (seq 0 (S M))).
+    rewrite (Lsum_succ u M).
+    rewrite (nfold_scal nat 2 (fun y => (y * S (hgap u M y))%nat)
+               (seq 0 (S M))).
+    rewrite (nfold_scal nat 3 (fun y => tri (hgap u M y)) (seq 0 (S M))).
+    rewrite (nfold_scal nat 4 (fun y => GGin u M y) (seq 0 (S M))).
+    cbn beta.
+    unfold Aw, Lsum, Cw, Bw, CCw, DDw, EEw, BBw, GGw, PCw, Yw, Tw, tri.
+    lia.
+Qed.

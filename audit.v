@@ -1683,3 +1683,10 @@ Print Assumptions d4form_stats.
 (* the per-word reduction, at a small word *)
 Compute (map (fun y => ((d4form (1 :: 0 :: 2 :: nil) 3 y + tri y)%nat,
                         d4stat (1 :: 0 :: 2 :: nil) 3 y)) (seq 0 4)).
+
+(* ---- the second-order statistics of the d = 4 level sum ---- *)
+Print Assumptions seq_gap_tri.
+Print Assumptions Lsum_succ.
+Print Assumptions d4stat_B.
+Print Assumptions d4stat_C.
+Print Assumptions d4stat_sum.
