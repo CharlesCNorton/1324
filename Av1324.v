@@ -23385,3 +23385,69 @@ Proof.
   remember (length (filter (fun z => Nat.leb z x) L)) as p eqn:Ep.
   nia.
 Qed.
+
+(* The safe-triple total. *)
+
+
+Lemma TPG_cnt2ge : forall b n y, 1 <= y -> y <= n ->
+  TPG b n y = cnt2ge (safelist b n) y.
+Proof.
+  intros b n y H1 H2. unfold TPG, cnt2ge.
+  rewrite (nfold_filter nat (safeb b) (fun v => cntge (safelist b n) v)
+             (seq y (S (n - y)))).
+  rewrite (nfold_filter nat (fun z => Nat.leb y z)
+             (fun v => cntge (safelist b n) v) (safelist b n)).
+  f_equal. unfold safelist.
+  rewrite (filter_filter nat (safeb b) (fun z => Nat.leb y z) (seq 1 n)).
+  rewrite <- (filter_ge_seq n y H1 H2).
+  rewrite (filter_filter nat (fun z => Nat.leb y z) (safeb b) (seq 1 n)).
+  apply filter_ext_gen. intro z. apply Bool.andb_comm.
+Qed.
+
+Lemma TRIPw_tripge : forall b n, TRIPw b n = tripge (safelist b n).
+Proof.
+  intros b n. unfold TRIPw, tripge.
+  rewrite (nfold_filter nat (safeb b) (fun y => TPG b n y) (seq 1 n)).
+  change (filter (safeb b) (seq 1 n)) with (safelist b n).
+  apply nfold_ext_in. intros y Hy.
+  unfold safelist in Hy. apply filter_In in Hy. destruct Hy as [Hin _].
+  apply in_seq in Hin.
+  apply (TPG_cnt2ge b n y ltac:(lia) ltac:(lia)).
+Qed.
+
+Corollary TRIPw_val : forall b n,
+  (6 * TRIPw b n
+   = (safecount b n - 1) * safecount b n * (safecount b n + 1))%nat.
+Proof.
+  intros b n.
+  rewrite (TRIPw_tripge b n).
+  rewrite (tripge_val (safelist b n) (safelist_nodup b n)).
+  assert (K := safelist_len b n).
+  remember (length (safelist b n)) as s eqn:Es.
+  rewrite <- K. replace (S s - 1)%nat with s by lia. lia.
+Qed.
+
+Definition TRIPtot (n : nat) : nat :=
+  fold_right (fun b acc => (TRIPw b n + acc)%nat) 0%nat (gen132 n).
+
+Theorem TRIPtot_closed : forall n,
+  (6 * TRIPtot n + card132 (S n) = sccube n)%nat.
+Proof.
+  intro n. unfold TRIPtot, sccube.
+  rewrite (card132_sccount n).
+  rewrite <- (nfold_scal (list nat) 6 (fun b => TRIPw b n) (gen132 n)).
+  rewrite <- (fold_add_split (list nat) (fun b => (6 * TRIPw b n)%nat)
+                (fun b => sccount b n) (gen132 n)).
+  apply nfold_ext_in. intros b Hb.
+  assert (Hp : is_perm b n) by (apply gen132_perm; exact Hb).
+  assert (K := TRIPw_val b n).
+  rewrite (safecount_sccount b n Hp) in K.
+  assert (Hpos : (1 <= sccount b n)%nat).
+  { unfold sccount.
+    apply (in_length_pos nat n).
+    apply filter_In. split; [apply in_seq; lia | apply topsplit_full]. }
+  remember (sccount b n) as c eqn:Ec.
+  destruct c as [|c']; [lia|].
+  replace (S c' - 1)%nat with c' in K by lia.
+  nia.
+Qed.

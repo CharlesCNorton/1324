@@ -1806,3 +1806,12 @@ Compute (map (fun b => let L := safelist b 4 in
                        ((6 * tripge L)%nat,
                         (length L * (length L + 1) * (length L + 2))%nat))
              (gen132f 4)).
+
+(* ---- the safe-triple total ---- *)
+Print Assumptions TPG_cnt2ge.
+Print Assumptions TRIPw_tripge.
+Print Assumptions TRIPw_val.
+Print Assumptions TRIPtot_closed.
+(* 6 TRIPtot n + Cat(n+1) = sccube n *)
+Compute (map (fun n => ((6 * TRIPtot n + card132 (S n))%nat, sccube n))
+             (seq 0 4)).
