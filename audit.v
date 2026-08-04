@@ -1844,3 +1844,11 @@ Compute (map (fun n => ((TRIPtot n + 3 * card132 (S (S n)))%nat,
 Print Assumptions conv_beta.
 Print Assumptions conv_U0.
 Print Assumptions conv_BB4_val.
+
+(* ---- the gap and level-sum blocks ---- *)
+Print Assumptions conv_BB10_val.
+Print Assumptions conv_Ltot_cat.
+Print Assumptions conv_Ltot_shift.
+Print Assumptions conv_kLtot_cat.
+Print Assumptions Bconv_shift1.
+Print Assumptions conv_kLtot_shift.

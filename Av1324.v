@@ -23785,3 +23785,127 @@ Proof.
   assert (U := conv_U0 m).
   lia.
 Qed.
+
+(* The gap and level-sum blocks. *)
+
+
+Lemma conv_BB10_val : forall m,
+  (2 * conv GGwptot (fun n => (n * card132 n)%nat) m + m * Aconv m
+   = wsum (fun k => (S k * S k * (m - k))%nat) m + Bconv m)%nat.
+Proof.
+  intro m.
+  assert (E : (conv (fun k => (2 * GGwptot k)%nat)
+                 (fun n => (n * card132 n)%nat) m
+               + conv (fun k => 4 ^ k) (fun n => (n * card132 n)%nat) m
+               = conv (fun k => (S k * S k * card132 k)%nat)
+                   (fun n => (n * card132 n)%nat) m)%nat).
+  { rewrite <- (conv_add_l (fun k => (2 * GGwptot k)%nat)
+                  (fun k => 4 ^ k) (fun n => (n * card132 n)%nat) m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n _. assert (K := GGwptot_closed n).
+    rewrite <- (card132_binom n) in K. nia. }
+  rewrite (conv_scal_l 2 GGwptot (fun n => (n * card132 n)%nat) m) in E.
+  rewrite (conv_wsum2 (fun k => (S k * S k)%nat) (fun n => n) m) in E.
+  assert (R := conv_rbconv m). lia.
+Qed.
+
+(* the two Ltot blocks against the shifted class *)
+
+Lemma conv_Ltot_cat : forall m,
+  (2 * conv Ltot card132 m + wsum S m = Aconv m)%nat.
+Proof.
+  intro m.
+  assert (E : (conv (fun k => (2 * Ltot k)%nat) card132 m
+               + conv (fun k => (S k * card132 k)%nat) card132 m
+               = conv (fun k => 4 ^ k) card132 m)%nat).
+  { rewrite <- (conv_add_l (fun k => (2 * Ltot k)%nat)
+                  (fun k => (S k * card132 k)%nat) card132 m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n _. assert (K := Ltot_closed n).
+    rewrite <- (card132_binom n) in K. lia. }
+  rewrite (conv_scal_l 2 Ltot card132 m) in E.
+  rewrite (conv_wsum S m) in E.
+  rewrite (conv_aconv m) in E. lia.
+Qed.
+
+Lemma conv_Ltot_shift : forall m,
+  (2 * conv Ltot (fun n => card132 (S n)) m + wsum S (S m) + 4 ^ (S m)
+   = Aconv (S m) + S (S m) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (E : (conv (fun k => (2 * Ltot k)%nat) (fun n => card132 (S n)) m
+               + conv (fun k => (S k * card132 k)%nat)
+                   (fun n => card132 (S n)) m
+               = conv (fun k => 4 ^ k) (fun n => card132 (S n)) m)%nat).
+  { rewrite <- (conv_add_l (fun k => (2 * Ltot k)%nat)
+                  (fun k => (S k * card132 k)%nat)
+                  (fun n => card132 (S n)) m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n _. assert (K := Ltot_closed n).
+    rewrite <- (card132_binom n) in K. lia. }
+  rewrite (conv_scal_l 2 Ltot (fun n => card132 (S n)) m) in E.
+  assert (S1 := conv_shift1 S m). cbn beta in S1.
+  assert (A1 := conv_a1 m).
+  lia.
+Qed.
+
+Lemma conv_kLtot_cat : forall m,
+  (2 * conv (fun k => (k * Ltot k)%nat) card132 m
+   + wsum (fun k => (k * S k)%nat) m = Bconv m)%nat.
+Proof.
+  intro m.
+  assert (E : (conv (fun k => (2 * (k * Ltot k))%nat) card132 m
+               + conv (fun k => (k * S k * card132 k)%nat) card132 m
+               = conv (fun k => (k * 4 ^ k)%nat) card132 m)%nat).
+  { rewrite <- (conv_add_l (fun k => (2 * (k * Ltot k))%nat)
+                  (fun k => (k * S k * card132 k)%nat) card132 m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n _. assert (K := Ltot_closed n).
+    rewrite <- (card132_binom n) in K. nia. }
+  rewrite (conv_scal_l 2 (fun k => (k * Ltot k)%nat) card132 m) in E.
+  rewrite (conv_wsum (fun k => (k * S k)%nat) m) in E.
+  rewrite (conv_bconv m) in E. lia.
+Qed.
+
+Lemma Bconv_shift1 : forall m,
+  (fold_right (fun k acc => (k * (4 ^ k * card132 (S (m - k))) + acc)%nat)
+     0%nat (seq 0 (S m)) + S m * 4 ^ (S m))%nat
+  = Bconv (S m).
+Proof.
+  intro m. unfold Bconv. rewrite (seq_snoc (S m) 0).
+  rewrite (nfold_app nat (fun k => (k * (4 ^ k * card132 (S m - k)))%nat)).
+  rewrite (nfold_single nat (fun k => (k * (4 ^ k * card132 (S m - k)))%nat)
+             (0 + S m)).
+  cbn beta. f_equal.
+  - apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+    replace (S m - k)%nat with (S (m - k)) by lia. reflexivity.
+  - replace (0 + S m)%nat with (S m) by lia.
+    rewrite Nat.sub_diag. change (card132 0) with 1%nat. ring.
+Qed.
+
+Lemma conv_kLtot_shift : forall m,
+  (2 * conv (fun k => (k * Ltot k)%nat) (fun n => card132 (S n)) m
+   + wsum (fun k => (k * S k)%nat) (S m) + S m * 4 ^ (S m)
+   = Bconv (S m) + S m * S (S m) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (E : (conv (fun k => (2 * (k * Ltot k))%nat)
+                 (fun n => card132 (S n)) m
+               + conv (fun k => (k * S k * card132 k)%nat)
+                   (fun n => card132 (S n)) m
+               = conv (fun k => (k * 4 ^ k)%nat) (fun n => card132 (S n)) m)%nat).
+  { rewrite <- (conv_add_l (fun k => (2 * (k * Ltot k))%nat)
+                  (fun k => (k * S k * card132 k)%nat)
+                  (fun n => card132 (S n)) m).
+    apply conv_ext; [|intros n _; reflexivity].
+    intros n _. assert (K := Ltot_closed n).
+    rewrite <- (card132_binom n) in K. nia. }
+  rewrite (conv_scal_l 2 (fun k => (k * Ltot k)%nat)
+             (fun n => card132 (S n)) m) in E.
+  assert (S2 := conv_shift1 (fun k => (k * S k)%nat) m). cbn beta in S2.
+  assert (B1 : (conv (fun k => (k * 4 ^ k)%nat) (fun n => card132 (S n)) m
+                + S m * 4 ^ (S m))%nat = Bconv (S m)).
+  { rewrite <- (Bconv_shift1 m). f_equal.
+    unfold conv. apply nfold_ext_in. intros k _. cbn beta. ring. }
+  lia.
+Qed.
