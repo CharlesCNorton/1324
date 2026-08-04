@@ -22025,3 +22025,185 @@ Proof.
                 (fun _ : list nat => Sq M) (fun u => Lsum u M) (gen132 M)).
   apply nfold_ext_in. intros u _. apply Tw_YH.
 Qed.
+
+(* The total of the safe values. *)
+
+
+(* The total of the safe values.  Under the max-split only the right factor's
+   safe values survive, together with the new maximum. *)
+
+Definition SSw (u : list nat) (M : nat) : nat :=
+  fold_right (fun y acc => ((if safeb u y then y else 0) + acc)%nat) 0%nat
+             (seq 1 M).
+
+Definition SStot (M : nat) : nat :=
+  fold_right (fun u acc => (SSw u M + acc)%nat) 0%nat (gen132 M).
+
+Theorem SSw_midmax : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  SSw (midmax a b) (length a + S (length b))
+  = (SSw b (length b) + (length a + S (length b)))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  assert (HN : length (midmax a b) = (length a + S (length b))%nat)
+    by apply midmax_length.
+  assert (Hpw0 : is_perm (midmax a b) (S (length a + length b)))
+    by (apply midmax_perm; assumption).
+  assert (Hpw : is_perm (midmax a b) (length (midmax a b))).
+  { rewrite HN.
+    replace (length a + S (length b))%nat with (S (length a + length b))
+      by lia. exact Hpw0. }
+  assert (Hsafe_w : forall y, safe_at (midmax a b) y
+                    <-> Hu (midmax a b) (length a + S (length b)) y
+                        = (length a + S (length b))%nat).
+  { intro y. rewrite <- HN. apply (safe_iff_Hu (midmax a b) y Hpw). }
+  assert (Hfalse : forall y,
+    Hu (midmax a b) (length a + S (length b)) y
+      <> (length a + S (length b))%nat ->
+    (if safeb (midmax a b) y then y else 0) = 0).
+  { intros y Hne.
+    destruct (safeb (midmax a b) y) eqn:E2; [|reflexivity].
+    exfalso. apply Hne. apply Hsafe_w. apply safeb_spec. exact E2. }
+  unfold SSw at 1. rewrite (seq_split_hi (length a) (length b)).
+  rewrite !(nfold_app nat
+    (fun y => if safeb (midmax a b) y then y else 0)).
+  replace (seq (length a + S (length b)) 1)
+    with ((length a + S (length b)) :: nil) by reflexivity.
+  rewrite (nfold_single nat
+    (fun y => if safeb (midmax a b) y then y else 0)
+    (length a + S (length b))).
+  cbn beta.
+  assert (Ptop : (if safeb (midmax a b) (length a + S (length b))
+                  then (length a + S (length b))%nat else 0)
+               = (length a + S (length b))%nat).
+  { assert (Hs : safe_at (midmax a b) (length a + S (length b))).
+    { apply Hsafe_w. apply Hu_top. }
+    assert (K : safeb (midmax a b) (length a + S (length b)) = true)
+      by (apply safeb_spec; exact Hs).
+    rewrite K. reflexivity. }
+  assert (Plo : fold_right (fun y acc =>
+      ((if safeb (midmax a b) y then y else 0) + acc)%nat) 0%nat
+      (seq 1 (length b))
+    = SSw b (length b)).
+  { unfold SSw. apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+    destruct (safeb b y) eqn:Es.
+    - assert (Hsb : safe_at b y) by (apply safeb_spec; exact Es).
+      assert (Ew := Hu_midmax_lo_safe a b y ltac:(lia) ltac:(lia) Hsb).
+      assert (Hsw : safe_at (midmax a b) y) by (apply Hsafe_w; exact Ew).
+      assert (Ks : safeb (midmax a b) y = true)
+        by (apply safeb_spec; exact Hsw).
+      rewrite Ks. reflexivity.
+    - assert (Hnsb : ~ safe_at b y).
+      { intro C. assert (K : safeb b y = true) by (apply safeb_spec; exact C).
+        rewrite Es in K. discriminate. }
+      assert (Ew := Hu_midmax_lo_unsafe a b y ltac:(lia) ltac:(lia) Hpb Hnsb).
+      assert (Hc := Hu_le_cap b (length b) y).
+      rewrite (Hfalse y ltac:(lia)). reflexivity. }
+  assert (Phi : fold_right (fun y acc =>
+      ((if safeb (midmax a b) y then y else 0) + acc)%nat) 0%nat
+      (seq (S (length b)) (length a))
+    = 0%nat).
+  { transitivity (fold_right (fun y acc => (0 + acc)%nat) 0%nat
+                    (seq (S (length b)) (length a))).
+    - apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+      assert (Ew := Hu_midmax_hi a b y Hpa Hpb ltac:(lia) ltac:(lia)).
+      assert (Hc := Hu_le_cap a (length a) (y - length b)).
+      rewrite (Hfalse y ltac:(lia)). reflexivity.
+    - rewrite (nfold_const nat 0 (seq (S (length b)) (length a))). ring. }
+  rewrite Plo, Phi, Ptop. lia.
+Qed.
+
+Theorem SStot_expand : forall m,
+  SStot (S m)
+  = fold_right (fun k acc =>
+      (card132 k * SStot (m - k) + card132 k * card132 (m - k) * S m
+       + acc)%nat) 0%nat (seq 0 (S m)).
+Proof.
+  intro m. unfold SStot at 1.
+  rewrite (nfold_pairs132 m (fun w => SSw w (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk. destruct Hk as [_ Hk].
+  assert (HkM : (k <= m)%nat) by lia.
+  transitivity (fold_right (fun a acc =>
+      (SStot (m - k) + card132 (m - k) * S m + acc)%nat) 0%nat (gen132 k)).
+  - apply nfold_ext_in. intros a Ha.
+    assert (Hpa0 : is_perm a k) by (apply gen132_perm; exact Ha).
+    assert (Hla : length a = k) by (apply (perm_len a k); exact Hpa0).
+    assert (Hpa : is_perm a (length a)) by (rewrite Hla; exact Hpa0).
+    transitivity (fold_right (fun v acc =>
+        (SSw v (m - k) + S m + acc)%nat) 0%nat (gen132 (m - k))).
+    + apply nfold_ext_in. intros v Hv.
+      assert (Hpv0 : is_perm v (m - k)) by (apply gen132_perm; exact Hv).
+      assert (Hlv : length v = (m - k)%nat)
+        by (apply (perm_len v (m - k)); exact Hpv0).
+      assert (Hpv : is_perm v (length v)) by (rewrite Hlv; exact Hpv0).
+      assert (K := SSw_midmax a v Hpa Hpv).
+      rewrite Hla, Hlv in K.
+      replace (k + S (m - k))%nat with (S m) in K by lia.
+      exact K.
+    + rewrite (fold_add_split (list nat) (fun v => SSw v (m - k))
+                 (fun _ : list nat => S m) (gen132 (m - k))).
+      cbn beta.
+      rewrite (nfold_const (list nat) (S m) (gen132 (m - k))).
+      unfold SStot, card132. ring.
+  - rewrite (nfold_const (list nat)
+               (SStot (m - k) + card132 (m - k) * S m) (gen132 k)).
+    unfold card132. ring.
+Qed.
+
+Lemma conv_shift_lin : forall m,
+  (conv card132 (fun n => (n * card132 (S n))%nat) m
+   + conv (fun k => (k * card132 k)%nat) (fun n => card132 (S n)) m
+   = m * conv card132 (fun n => card132 (S n)) m)%nat.
+Proof.
+  intro m. unfold conv.
+  rewrite <- (nfold_scal nat m (fun k => (card132 k * card132 (S (m - k)))%nat)
+                (seq 0 (S m))).
+  rewrite <- (fold_add_split nat
+    (fun k => (card132 k * ((m - k) * card132 (S (m - k))))%nat)
+    (fun k => (k * card132 k * card132 (S (m - k)))%nat) (seq 0 (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+  remember (m - k)%nat as d eqn:Ed.
+  assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring.
+Qed.
+
+Lemma SStot_step : forall m,
+  (forall j, (j <= m)%nat -> (2 * SStot j = j * card132 (S j))%nat) ->
+  (2 * SStot (S m) = S m * card132 (S (S m)))%nat.
+Proof.
+  intros m IH.
+  assert (E : (2 * SStot (S m))%nat
+    = (conv card132 (fun n => (n * card132 (S n))%nat) m
+       + 2 * S m * conv card132 card132 m)%nat).
+  { rewrite (SStot_expand m).
+    rewrite <- (conv_scal_l (2 * S m) card132 card132 m).
+    unfold conv.
+    rewrite <- (nfold_scal nat 2
+      (fun k => (card132 k * SStot (m - k)
+                 + card132 k * card132 (m - k) * S m)%nat) (seq 0 (S m))).
+    rewrite <- (fold_add_split nat
+      (fun k => (card132 k * ((m - k) * card132 (S (m - k))))%nat)
+      (fun k => (2 * S m * card132 k * card132 (m - k))%nat) (seq 0 (S m))).
+    apply nfold_ext_in. intros k Hk. apply in_seq in Hk.
+    assert (K := IH (m - k)%nat ltac:(lia)).
+    assert (K2 := f_equal (Nat.mul (card132 k)) K). nia. }
+  assert (V0 := conv_V0 m).
+  assert (V1 := conv_shift1 (fun k => k) m). cbn beta in V1.
+  assert (W := wsum_id_val (S m)).
+  assert (L := conv_shift_lin m).
+  assert (Ccat := conv_cat m).
+  assert (R := card132_ratio (S m)).
+  nia.
+Qed.
+
+Theorem SStot_closed_upto : forall N M, (M <= N)%nat ->
+  (2 * SStot M = M * card132 (S M))%nat.
+Proof.
+  induction N as [|N IHN]; intros M HM.
+  - assert (E : M = 0%nat) by lia. subst M. reflexivity.
+  - destruct (le_lt_dec M N) as [H|H]; [apply IHN; exact H|].
+    assert (EM : M = S N) by lia. subst M.
+    apply SStot_step. intros j Hj. apply IHN. lia.
+Qed.
+
+Theorem SStot_closed : forall M, (2 * SStot M = M * card132 (S M))%nat.
+Proof. intro M. apply (SStot_closed_upto M M). lia. Qed.

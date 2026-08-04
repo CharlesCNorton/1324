@@ -1707,3 +1707,13 @@ Print Assumptions Tw_YH.
 Print Assumptions Hsq0tot_split.
 Print Assumptions Ytot_YH.
 Print Assumptions Ttot_YH.
+
+(* ---- the total of the safe values ---- *)
+Print Assumptions SSw_midmax.
+Print Assumptions SStot_expand.
+Print Assumptions conv_shift_lin.
+Print Assumptions SStot_step.
+Print Assumptions SStot_closed.
+(* 2 SStot M = M Cat(M+1) *)
+Compute (map (fun M => ((2 * SStot M)%nat, (M * card132 (S M))%nat))
+             (seq 0 5)).
