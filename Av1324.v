@@ -22488,3 +22488,200 @@ Proof.
     by (apply wsum_ext; intros k _; lia).
   lia.
 Qed.
+
+(* The position-weighted level sum in closed form. *)
+
+
+Lemma Aconv_cat : forall m,
+  (2 * Aconv m + (m + 2) * card132 (S m) = 4 * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (H := Aconv_closed m).
+  assert (B := card132_binom (S m)).
+  replace (4 ^ S m)%nat with (4 * 4 ^ m)%nat in H by (cbn [Nat.pow]; ring).
+  lia.
+Qed.
+
+Lemma Bconv_cat : forall m,
+  (Bconv m + (m + 1) * ((m + 2) * card132 (S m)) = 2 * (m + 1) * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (H := Bconv_val m).
+  assert (R := cbi_ratio m).
+  assert (B := card132_binom (S m)).
+  unfold cb in H, R.
+  replace (4 ^ S m)%nat with (4 * 4 ^ m)%nat in H by (cbn [Nat.pow]; ring).
+  nia.
+Qed.
+
+Lemma wsum_2kk1 : forall m,
+  wsum (fun k => (2 * k * (k + 1))%nat) m
+  = (2 * wsum (fun k => (k * k)%nat) m + 2 * wsum (fun k => k) m)%nat.
+Proof.
+  intro m.
+  assert (K := wsum_split4 0 2 2 0 m).
+  assert (E : wsum (fun k => (0 * (k * k * k) + 2 * (k * k) + 2 * k + 0)%nat) m
+            = wsum (fun k => (2 * k * (k + 1))%nat) m)
+    by (apply wsum_ext; intros k _; lia).
+  lia.
+Qed.
+
+Lemma wsum_8k2k1 : forall m,
+  wsum (fun k => (8 * k * k * (k + 1))%nat) m
+  = (8 * wsum (fun k => (k * k * k)%nat) m
+     + 8 * wsum (fun k => (k * k)%nat) m)%nat.
+Proof.
+  intro m.
+  assert (K := wsum_split4 8 8 0 0 m).
+  assert (E : wsum (fun k => (8 * (k * k * k) + 8 * (k * k) + 0 * k + 0)%nat) m
+            = wsum (fun k => (8 * k * k * (k + 1))%nat) m)
+    by (apply wsum_ext; intros k _; lia).
+  lia.
+Qed.
+
+Lemma YH_B1 : forall m,
+  (forall j, (j <= m)%nat -> YHCL j) ->
+  (24 * conv card132 YHtot m + 6 * m * 4 ^ m
+   = (4 * m * m * m + 12 * m * m + 8 * m) * card132 (S m))%nat.
+Proof.
+  intros m IH.
+  assert (A := conv_YA m IH).
+  rewrite (wsum_2kk1 m), (wsum_8k2k1 m) in A.
+  assert (W3 := wsum_id_val m).
+  assert (W5 := wsum_sq_val m).
+  assert (W7 := wsum_kmk_val m).
+  assert (W8 := wsum_cube_val m).
+  assert (Bc := Bconv_cat m).
+  nia.
+Qed.
+
+Lemma YH_B4 : forall m,
+  (forall j, (j <= m)%nat -> YHCL j) ->
+  (24 * conv YHtot card132 m + 6 * m * 4 ^ m
+   = (4 * m * m * m + 12 * m * m + 8 * m) * card132 (S m))%nat.
+Proof.
+  intros m IH.
+  assert (A := conv_YF m IH).
+  rewrite (wsum_2kk1 m), (wsum_8k2k1 m) in A.
+  assert (W3 := wsum_id_val m).
+  assert (W5 := wsum_sq_val m).
+  assert (W7 := wsum_kmk_val m).
+  assert (W8 := wsum_cube_val m).
+  assert (Bc := Bconv_cat m).
+  nia.
+Qed.
+
+Lemma YH_B2 : forall m,
+  (2 * conv (fun k => (S k * card132 k)%nat) SStot m
+   + (m + 3) * card132 (S (S m))
+   = (m + 2) * card132 (S m) + 4 * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_YS m).
+  assert (S1 := conv_shift1 S m).
+  assert (S2 := conv_shift1 (fun k => (k * (k + 1))%nat) m).
+  cbn beta in S1, S2.
+  assert (S1m := f_equal (Nat.mul m) S1).
+  rewrite (wsum_Sw (S m)) in S1, S1m.
+  rewrite (wsum_kk1 (S m)) in S2.
+  assert (W2 := wsum_const 1 (S m)).
+  assert (W2m := f_equal (Nat.mul m) W2).
+  assert (W4 := wsum_id_val (S m)).
+  assert (W4m := f_equal (Nat.mul m) W4).
+  assert (W6 := wsum_sq_val (S m)).
+  replace (4 ^ S m)%nat with (4 * 4 ^ m)%nat in W6 by (cbn [Nat.pow]; ring).
+  nia.
+Qed.
+
+Lemma YH_B3 : forall m,
+  (4 * conv (fun k => (tri k * card132 k)%nat) (fun n => (n * card132 n)%nat) m
+   + (m + 2) * ((m + 1) * card132 (S m))
+   = (m + 2) * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_YT m).
+  rewrite (wsum_kk1mk m) in A.
+  assert (W7 := wsum_kmk_val m).
+  assert (W9 := wsum_kkmk_val m).
+  nia.
+Qed.
+
+Lemma YH_B5 : forall m,
+  (2 * conv (fun k => (k * card132 k)%nat) (fun n => (n * n * card132 n)%nat) m
+   + m * ((m + 1) * card132 (S m))
+   = m * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_wsum2 (fun k => k) (fun n => (n * n)%nat) m).
+  assert (W7 := wsum_kmk_val m).
+  assert (W10 := wsum_kmk2_val m).
+  nia.
+Qed.
+
+Lemma YH_B6 : forall m,
+  (4 * conv Awptot (fun n => (n * card132 n)%nat) m + 8 * 4 ^ m
+   = m * 4 ^ m + (6 * m + 8) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := conv_HD m).
+  rewrite (wsum_3k1mk m), (wsum_kk1mk m) in A.
+  assert (W3 := wsum_id_val m).
+  assert (W7 := wsum_kmk_val m).
+  assert (W9 := wsum_kkmk_val m).
+  assert (Ac := Aconv_cat m).
+  assert (Acm := f_equal (Nat.mul m) Ac).
+  assert (Bc := Bconv_cat m).
+  nia.
+Qed.
+
+Lemma YHtot_step : forall m, (forall j, (j <= m)%nat -> YHCL j) -> YHCL (S m).
+Proof.
+  intros m IH. unfold YHCL.
+  assert (E : YHtot (S m)
+    = (conv card132 YHtot m
+       + conv (fun k => (S k * card132 k)%nat) SStot m
+       + conv (fun k => (tri k * card132 k)%nat)
+              (fun n => (n * card132 n)%nat) m
+       + conv YHtot card132 m
+       + conv (fun k => (k * card132 k)%nat)
+              (fun n => (n * n * card132 n)%nat) m
+       + conv Awptot (fun n => (n * card132 n)%nat) m
+       + S m * S m * conv card132 card132 m)%nat).
+  { rewrite (YHtot_expand m).
+    rewrite <- (conv_scal_l (S m * S m) card132 card132 m).
+    unfold conv. cbn beta.
+    rewrite <- (nfold_seven nat
+      (fun k => (card132 k * YHtot (m - k))%nat)
+      (fun k => (S k * card132 k * SStot (m - k))%nat)
+      (fun k => (tri k * card132 k * ((m - k) * card132 (m - k)))%nat)
+      (fun k => (YHtot k * card132 (m - k))%nat)
+      (fun k => (k * card132 k * ((m - k) * (m - k) * card132 (m - k)))%nat)
+      (fun k => (Awptot k * ((m - k) * card132 (m - k)))%nat)
+      (fun k => (S m * S m * card132 k * card132 (m - k))%nat)
+      (seq 0 (S m))).
+    apply nfold_ext_in. intros k _. cbn beta. ring. }
+  assert (E1 := YH_B1 m IH).
+  assert (E4 := YH_B4 m IH).
+  assert (E2 := YH_B2 m).
+  assert (E3 := YH_B3 m).
+  assert (E5 := YH_B5 m).
+  assert (E6 := YH_B6 m).
+  assert (E7 := conv_cat m).
+  assert (E7m := f_equal (Nat.mul m) E7).
+  assert (E7m2 := f_equal (Nat.mul (m * m)) E7).
+  assert (R := card132_ratio (S m)).
+  replace (4 ^ S m)%nat with (4 * 4 ^ m)%nat by (cbn [Nat.pow]; ring).
+  rewrite E. lia.
+Qed.
+
+Theorem YHtot_closed_upto : forall N M, (M <= N)%nat -> YHCL M.
+Proof.
+  induction N as [|N IHN]; intros M HM.
+  - assert (E : M = 0%nat) by lia. subst M. unfold YHCL. reflexivity.
+  - destruct (le_lt_dec M N) as [H|H]; [apply IHN; exact H|].
+    assert (EM : M = S N) by lia. subst M.
+    apply YHtot_step. intros j Hj. apply IHN. lia.
+Qed.
+
+Theorem YHtot_closed : forall M, YHCL M.
+Proof. intro M. apply (YHtot_closed_upto M M). lia. Qed.

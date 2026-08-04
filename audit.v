@@ -1729,3 +1729,18 @@ Print Assumptions conv_YF.
 Print Assumptions conv_YS.
 Print Assumptions conv_YT.
 Print Assumptions wsum_Sw.
+
+(* ---- the position-weighted level sum in closed form ---- *)
+Print Assumptions Aconv_cat.
+Print Assumptions Bconv_cat.
+Print Assumptions YH_B1.
+Print Assumptions YH_B2.
+Print Assumptions YH_B3.
+Print Assumptions YH_B5.
+Print Assumptions YH_B6.
+Print Assumptions YHtot_step.
+Print Assumptions YHtot_closed.
+(* 24 YHtot M + 2 M C(2M,M) = 8 M^2 C(2M,M) + 3 M 4^M *)
+Compute (map (fun M => ((24 * YHtot M + 2 * M * binomN (2 * M) M)%nat,
+                        (8 * M * M * binomN (2 * M) M + 3 * M * 4 ^ M)%nat))
+             (seq 0 5)).
