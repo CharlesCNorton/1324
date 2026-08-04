@@ -24736,3 +24736,242 @@ Proof.
   assert (S4 := card132_binom M).
   nia.
 Qed.
+
+(* The prefix-sum statistic and the third moment of the state function. *)
+
+
+Definition kCw (u : list nat) (M : nat) : nat :=
+  fold_right (fun z acc => (z * Cin u M z + acc)%nat) 0%nat (seq 1 M).
+
+Definition kCtot (M : nat) : nat :=
+  fold_right (fun u acc => (kCw u M + acc)%nat) 0%nat (gen132 M).
+
+Lemma Cin_zero : forall u M, Cin u M 0 = 0%nat.
+Proof. intros u M. reflexivity. Qed.
+
+Lemma Cw_from1 : forall u M,
+  Cw u M = fold_right (fun z acc => (Cin u M z + acc)%nat) 0%nat (seq 1 M).
+Proof.
+  intros u M. unfold Cw. change (seq 0 (S M)) with (0%nat :: seq 1 M).
+  cbn [fold_right]. rewrite Cin_zero. reflexivity.
+Qed.
+
+Lemma CCw_swap : forall u M,
+  CCw u M
+  = fold_right (fun z acc => ((S M - z) * Cin u M z + acc)%nat) 0%nat
+      (seq 1 M).
+Proof.
+  intros u M. unfold CCw, CCin.
+  rewrite (swap_tri (fun _ z => Cin u M z) M).
+  apply nfold_ext_in. intros z Hz. cbn beta. f_equal.
+  rewrite (nfold_const nat (Cin u M z) (seq z (S M - z))).
+  rewrite length_seq. ring.
+Qed.
+
+Lemma CCw_kCw : forall u M, (CCw u M + kCw u M = S M * Cw u M)%nat.
+Proof.
+  intros u M. rewrite CCw_swap, Cw_from1. unfold kCw.
+  rewrite <- (fold_add_split nat (fun z => ((S M - z) * Cin u M z)%nat)
+                (fun z => (z * Cin u M z)%nat) (seq 1 M)).
+  rewrite <- (nfold_scal nat (S M) (fun z => Cin u M z) (seq 1 M)).
+  apply nfold_ext_in. intros z Hz. apply in_seq in Hz. cbn beta.
+  assert (Hz2 : (z <= S M)%nat) by lia. nia.
+Qed.
+
+Lemma CCtot_kCtot : forall M, (CCtot M + kCtot M = S M * Ctot M)%nat.
+Proof.
+  intro M. unfold CCtot, kCtot, Ctot.
+  rewrite <- (fold_add_split (list nat) (fun u => CCw u M)
+                (fun u => kCw u M) (gen132 M)).
+  rewrite <- (nfold_scal (list nat) (S M) (fun u => Cw u M) (gen132 M)).
+  apply nfold_ext_in. intros u _. cbn beta. apply CCw_kCw.
+Qed.
+
+Definition sqsum (M : nat) : nat :=
+  fold_right (fun y acc => (y * y + acc)%nat) 0%nat (seq 0 (S M)).
+
+Lemma sqsum_val : forall M, (6 * sqsum M = M * (M + 1) * (2 * M + 1))%nat.
+Proof.
+  induction M as [|M IH]; [reflexivity|].
+  unfold sqsum. rewrite (nfold_seq_snoc (fun y => (y * y)%nat) (S M)).
+  unfold sqsum in IH. nia.
+Qed.
+
+Lemma wminsum_val : forall z h M, (1 <= z)%nat -> (z <= h)%nat -> (h <= M)%nat ->
+  (fold_right (fun y acc => (y * Nat.min y h + acc)%nat) 0%nat (seq z (S M - z))
+   + sqsum (z - 1) + h * tri h
+   = sqsum h + h * tri M)%nat.
+Proof.
+  intros z h M H1 H2 H3.
+  replace (S M - z)%nat with ((S h - z) + (M - h))%nat by lia.
+  rewrite (seq_break (S h - z) (M - h) z).
+  rewrite (nfold_app nat (fun y => (y * Nat.min y h)%nat)).
+  replace (z + (S h - z))%nat with (S h) by lia.
+  assert (A : fold_right (fun y acc => (y * Nat.min y h + acc)%nat) 0%nat
+                (seq z (S h - z))
+            = fold_right (fun y acc => (y * y + acc)%nat) 0%nat
+                (seq z (S h - z))).
+  { apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+    replace (Nat.min y h) with y by lia. reflexivity. }
+  assert (B : fold_right (fun y acc => (y * Nat.min y h + acc)%nat) 0%nat
+                (seq (S h) (M - h))
+            = (h * fold_right (fun y acc => (y + acc)%nat) 0%nat
+                     (seq (S h) (M - h)))%nat).
+  { transitivity (fold_right (fun y acc => (h * y + acc)%nat) 0%nat
+                    (seq (S h) (M - h))).
+    - apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+      replace (Nat.min y h) with h by lia. ring.
+    - rewrite (nfold_scal nat h (fun y => y) (seq (S h) (M - h))).
+      reflexivity. }
+  assert (LS : seq 0 (S h) = seq 0 z ++ seq z (S h - z)).
+  { replace (S h) with (z + (S h - z))%nat at 1 by lia.
+    rewrite (seq_break z (S h - z) 0). rewrite Nat.add_0_l. reflexivity. }
+  assert (Q : sqsum h = (sqsum (z - 1)
+                       + fold_right (fun y acc => (y * y + acc)%nat) 0%nat
+                           (seq z (S h - z)))%nat).
+  { unfold sqsum. rewrite LS. rewrite (nfold_app nat (fun y => (y * y)%nat)).
+    replace (S (z - 1)) with z by lia. reflexivity. }
+  assert (LT : seq 0 (S M) = seq 0 (S h) ++ seq (S h) (M - h)).
+  { replace (S M) with (S h + (M - h))%nat at 1 by lia.
+    rewrite (seq_break (S h) (M - h) 0). rewrite Nat.add_0_l. reflexivity. }
+  assert (T : tri M = (tri h + fold_right (fun y acc => (y + acc)%nat) 0%nat
+                                 (seq (S h) (M - h)))%nat).
+  { unfold tri. rewrite LT. rewrite (nfold_app nat (fun y => y)). reflexivity. }
+  rewrite A, B, Q, T. lia.
+Qed.
+
+Lemma kCw_swap : forall u M,
+  kCw u M
+  = fold_right (fun z acc =>
+      (fold_right (fun y acc' => (y * Nat.min y (Hu u M z) + acc')%nat) 0%nat
+         (seq z (S M - z)) + acc)%nat) 0%nat (seq 1 M).
+Proof.
+  intros u M.
+  assert (Sw := swap_tri (fun y z => (y * Nat.min y (Hu u M z))%nat) M).
+  cbn beta in Sw. rewrite <- Sw.
+  change (seq 0 (S M)) with (0%nat :: seq 1 M).
+  cbn [fold_right seq].
+  unfold kCw. apply nfold_ext_in. intros y Hy. cbn beta. f_equal.
+  unfold Cin.
+  rewrite (nfold_scal nat y (fun z => Nat.min y (Hu u M z)) (seq 1 y)).
+  reflexivity.
+Qed.
+
+Definition sqsum2 (M : nat) : nat :=
+  fold_right (fun z acc => (sqsum (z - 1) + acc)%nat) 0%nat (seq 1 M).
+
+Lemma kCw_val : forall u M,
+  (kCw u M + sqsum2 M
+   + fold_right (fun z acc => (Hu u M z * tri (Hu u M z) + acc)%nat) 0%nat
+       (seq 1 M)
+   = fold_right (fun z acc => (sqsum (Hu u M z) + acc)%nat) 0%nat (seq 1 M)
+     + tri M * Awp u M)%nat.
+Proof.
+  intros u M. rewrite kCw_swap. unfold sqsum2, Awp.
+  rewrite <- (nfold_scal nat (tri M) (fun z => Hu u M z) (seq 1 M)).
+  rewrite <- (fold_add_split nat
+    (fun z => fold_right (fun y acc' => (y * Nat.min y (Hu u M z) + acc')%nat)
+                0%nat (seq z (S M - z)))
+    (fun z => sqsum (z - 1)) (seq 1 M)).
+  rewrite <- (fold_add_split nat
+    (fun z => (fold_right (fun y acc' => (y * Nat.min y (Hu u M z) + acc')%nat)
+                 0%nat (seq z (S M - z)) + sqsum (z - 1))%nat)
+    (fun z => (Hu u M z * tri (Hu u M z))%nat) (seq 1 M)).
+  rewrite <- (fold_add_split nat
+    (fun z => sqsum (Hu u M z)) (fun z => (tri M * Hu u M z)%nat) (seq 1 M)).
+  apply nfold_ext_in. intros z Hz. apply in_seq in Hz. cbn beta.
+  assert (W := wminsum_val z (Hu u M z) M).
+  assert (H1 : (1 <= z)%nat) by lia.
+  assert (H2 : (z <= Hu u M z)%nat) by (apply Hu_ge; lia).
+  assert (H3 : (Hu u M z <= M)%nat) by (apply Hu_le_cap).
+  specialize (W H1 H2 H3). lia.
+Qed.
+
+Definition Hcube (u : list nat) (M : nat) : nat :=
+  fold_right (fun z acc => (Hu u M z * Hu u M z * Hu u M z + acc)%nat) 0%nat
+             (seq 1 M).
+
+Definition Hcubetot (M : nat) : nat :=
+  fold_right (fun u acc => (Hcube u M + acc)%nat) 0%nat (gen132 M).
+
+Lemma Hfold_htri : forall u M,
+  (2 * fold_right (fun z acc => (Hu u M z * tri (Hu u M z) + acc)%nat) 0%nat
+         (seq 1 M)
+   = Hcube u M + Hsq u M)%nat.
+Proof.
+  intros u M. unfold Hcube, Hsq.
+  rewrite <- (nfold_scal nat 2
+    (fun z => (Hu u M z * tri (Hu u M z))%nat) (seq 1 M)).
+  rewrite <- (fold_add_split nat
+    (fun z => (Hu u M z * Hu u M z * Hu u M z)%nat)
+    (fun z => (Hu u M z * Hu u M z)%nat) (seq 1 M)).
+  apply nfold_ext_in. intros z _. cbn beta.
+  assert (T := tri_val (Hu u M z)). nia.
+Qed.
+
+Lemma Hfold_sqsum : forall u M,
+  (6 * fold_right (fun z acc => (sqsum (Hu u M z) + acc)%nat) 0%nat (seq 1 M)
+   = 2 * Hcube u M + 3 * Hsq u M + Awp u M)%nat.
+Proof.
+  intros u M. unfold Hcube, Hsq, Awp.
+  rewrite <- (nfold_scal nat 6 (fun z => sqsum (Hu u M z)) (seq 1 M)).
+  rewrite <- (nfold_scal nat 2
+    (fun z => (Hu u M z * Hu u M z * Hu u M z)%nat) (seq 1 M)).
+  rewrite <- (nfold_scal nat 3
+    (fun z => (Hu u M z * Hu u M z)%nat) (seq 1 M)).
+  rewrite <- (fold_add_split nat
+    (fun z => (2 * (Hu u M z * Hu u M z * Hu u M z))%nat)
+    (fun z => (3 * (Hu u M z * Hu u M z))%nat) (seq 1 M)).
+  rewrite <- (fold_add_split nat
+    (fun z => (2 * (Hu u M z * Hu u M z * Hu u M z)
+               + 3 * (Hu u M z * Hu u M z))%nat)
+    (fun z => Hu u M z) (seq 1 M)).
+  apply nfold_ext_in. intros z _. cbn beta.
+  assert (S := sqsum_val (Hu u M z)). nia.
+Qed.
+
+Lemma kCw_Hcube : forall u M,
+  (6 * kCw u M + 6 * sqsum2 M + Hcube u M = (1 + 6 * tri M) * Awp u M)%nat.
+Proof.
+  intros u M.
+  assert (A := f_equal (Nat.mul 6) (kCw_val u M)).
+  assert (B := Hfold_htri u M).
+  assert (C := Hfold_sqsum u M).
+  nia.
+Qed.
+
+Lemma kCtot_Hcubetot : forall M,
+  (6 * kCtot M + 6 * (card132 M * sqsum2 M) + Hcubetot M
+   = (1 + 6 * tri M) * Awptot M)%nat.
+Proof.
+  intro M. unfold kCtot, Hcubetot, Awptot.
+  assert (Hc : (card132 M * (6 * sqsum2 M))%nat
+             = fold_right (fun u acc => (6 * sqsum2 M + acc)%nat) 0%nat
+                 (gen132 M)).
+  { rewrite (nfold_const (list nat) (6 * sqsum2 M) (gen132 M)).
+    unfold card132. ring. }
+  rewrite <- (nfold_scal (list nat) 6 (fun u => kCw u M) (gen132 M)).
+  rewrite <- (nfold_scal (list nat) (1 + 6 * tri M)
+                (fun u => Awp u M) (gen132 M)).
+  replace (6 * (card132 M * sqsum2 M))%nat with (card132 M * (6 * sqsum2 M))%nat
+    by ring.
+  rewrite Hc.
+  rewrite <- (fold_add_split (list nat) (fun u => (6 * kCw u M)%nat)
+                (fun u => (6 * sqsum2 M)%nat) (gen132 M)).
+  rewrite <- (fold_add_split (list nat)
+                (fun u => (6 * kCw u M + 6 * sqsum2 M)%nat)
+                (fun u => Hcube u M) (gen132 M)).
+  apply nfold_ext_in. intros u _. cbn beta. apply kCw_Hcube.
+Qed.
+
+Lemma sqsum2_val : forall M,
+  (12 * sqsum2 M + M * M * (M + 1) = M * M * M * (M + 1))%nat.
+Proof.
+  induction M as [|M IH]; [reflexivity|].
+  unfold sqsum2. rewrite (seq_snoc M 1).
+  rewrite (nfold_app nat (fun z => sqsum (z - 1))).
+  rewrite (nfold_single nat (fun z => sqsum (z - 1)) (1 + M)).
+  unfold sqsum2 in IH. cbn beta.
+  replace (1 + M - 1)%nat with M by lia.
+  assert (Sv := sqsum_val M). nia.
+Qed.

@@ -1922,3 +1922,17 @@ Print Assumptions BBwptot_step.
 Print Assumptions BBwptot_closed.
 Print Assumptions BBtot_split.
 Print Assumptions BBtot_closed.
+
+(* ---- the prefix-sum statistic and the third moment ---- *)
+Print Assumptions CCw_swap.
+Print Assumptions CCw_kCw.
+Print Assumptions CCtot_kCtot.
+Print Assumptions sqsum_val.
+Print Assumptions wminsum_val.
+Print Assumptions kCw_swap.
+Print Assumptions kCw_val.
+Print Assumptions Hfold_htri.
+Print Assumptions Hfold_sqsum.
+Print Assumptions kCw_Hcube.
+Print Assumptions kCtot_Hcubetot.
+Print Assumptions sqsum2_val.
