@@ -1639,3 +1639,9 @@ Compute (map (fun m => (fold_right (fun k acc =>
 (* the weighted central-binomial self-convolutions *)
 Compute (map (fun m => ((8 * bsum (fun k => (k * k)%nat) m)%nat,
                         (m * (3 * m + 1) * 4 ^ m)%nat)) (seq 0 4)).
+
+(* ---- cubic weights ---- *)
+Print Assumptions bsum_cube_val.
+Print Assumptions bsum_kkmk_val.
+Print Assumptions bsum_kmkmk_val.
+Print Assumptions esum_sq_val.

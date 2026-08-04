@@ -20968,3 +20968,81 @@ Proof.
   assert (E := esum_one m). unfold esum, cb in E. cbn beta in E.
   rewrite <- E. apply nfold_ext_in. intros k _. cbn beta. ring.
 Qed.
+
+(* Cubic weights on both convolutions. *)
+
+
+(* Cubic weights on both convolutions. *)
+
+Lemma bsum_cube_val : forall m,
+  (16 * bsum (fun k => (k * k * k)%nat) m
+   = m * m * (5 * m + 3) * 4 ^ m)%nat.
+Proof.
+  induction m as [|n IH]; [reflexivity|].
+  assert (S1 := bsum_shift (fun k => (k * k)%nat) n). cbn beta in S1.
+  assert (E1 : bsum (fun k => (k * (k * k))%nat) n
+             = bsum (fun k => (k * k * k)%nat) n)
+    by (apply bsum_ext; intros k _; ring).
+  rewrite E1 in S1.
+  assert (E2 : (bsum (fun j => (j * ((j - 1) * (j - 1)))%nat) (S n)
+                + 2 * bsum (fun k => (k * k)%nat) (S n))%nat
+             = (bsum (fun k => (k * k * k)%nat) (S n)
+                + bsum (fun k => k) (S n))%nat).
+  { rewrite <- (bsum_scal 2 (fun k => (k * k)%nat) (S n)).
+    rewrite (bsum_add (fun j => (j * ((j - 1) * (j - 1)))%nat)
+               (fun k => (2 * (k * k))%nat) (S n)).
+    rewrite (bsum_add (fun k => (k * k * k)%nat) (fun k => k) (S n)).
+    apply bsum_ext. intros j _.
+    destruct j as [|j]; [reflexivity|].
+    replace (S j - 1)%nat with j by lia. ring. }
+  assert (A := bsum_id_val (S n)).
+  assert (B := bsum_sq_val n).
+  assert (C := bsum_sq_val (S n)).
+  replace (4 ^ S n)%nat with (4 * 4 ^ n)%nat in A, C by (cbn [Nat.pow]; ring).
+  replace (4 ^ S n)%nat with (4 * 4 ^ n)%nat by (cbn [Nat.pow]; ring).
+  nia.
+Qed.
+
+Lemma bsum_kkmk_val : forall m,
+  (16 * bsum (fun k => (k * k * (m - k))%nat) m + m * m * (5 * m + 3) * 4 ^ m
+   = 2 * m * m * (3 * m + 1) * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (E : (bsum (fun k => (k * k * (m - k))%nat) m
+               + bsum (fun k => (k * k * k)%nat) m)%nat
+            = bsum (fun k => (m * (k * k))%nat) m).
+  { rewrite (bsum_add (fun k => (k * k * (m - k))%nat)
+               (fun k => (k * k * k)%nat) m).
+    apply bsum_ext. intros k Hk.
+    remember (m - k)%nat as d eqn:Ed.
+    assert (EM : m = (k + d)%nat) by lia. rewrite EM. ring. }
+  rewrite (bsum_scal m (fun k => (k * k)%nat) m) in E.
+  assert (A := bsum_sq_val m).
+  assert (B := bsum_cube_val m).
+  nia.
+Qed.
+
+Lemma bsum_kmkmk_val : forall m,
+  (2 * bsum (fun k => (k * ((m - k) * (m - k)))%nat) m
+   = 2 * bsum (fun k => (k * k * (m - k))%nat) m)%nat.
+Proof.
+  intro m.
+  assert (R : bsum (fun k => (k * k * (m - k))%nat) m
+            = bsum (fun k => ((m - k) * (m - k) * k)%nat) m).
+  { rewrite (bsum_rev (fun k => (k * k * (m - k))%nat) m).
+    apply bsum_ext. intros k Hk.
+    replace (m - (m - k))%nat with k by lia. reflexivity. }
+  assert (E : bsum (fun k => (k * ((m - k) * (m - k)))%nat) m
+            = bsum (fun k => ((m - k) * (m - k) * k)%nat) m)
+    by (apply bsum_ext; intros k _; ring).
+  lia.
+Qed.
+
+Lemma esum_sq_val : forall m,
+  (15 * esum (fun k => (k * k)%nat) m
+   = m * (6 * m * m + 7 * m + 2) * cb m)%nat.
+Proof.
+  induction m as [|n IH]; [reflexivity|].
+  rewrite (esum_rec (fun k => (k * k)%nat) n). cbn beta.
+  assert (R := cbi_ratio n). nia.
+Qed.
