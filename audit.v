@@ -1852,3 +1852,9 @@ Print Assumptions conv_Ltot_shift.
 Print Assumptions conv_kLtot_cat.
 Print Assumptions Bconv_shift1.
 Print Assumptions conv_kLtot_shift.
+
+(* ---- the induction blocks and the shifted subtree total ---- *)
+Print Assumptions conv_a2.
+Print Assumptions conv_BB1.
+Print Assumptions conv_BB12.
+Print Assumptions conv_Bwptot_shift.
