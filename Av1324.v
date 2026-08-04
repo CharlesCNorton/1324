@@ -22823,3 +22823,96 @@ Proof.
   assert (C := scsq_closed (S m)).
   lia.
 Qed.
+
+(* The second-order subtree sum under the max-split. *)
+
+
+(* Laminarity forbids a safe node inside an unsafe node's subtree. *)
+
+Lemma safe_subtree_unsafe : forall b y v,
+  is_perm b (length b) -> 1 <= y -> y <= length b -> ~ safe_at b y ->
+  y <= v -> v <= Hu b (length b) y -> ~ safe_at b v.
+Proof.
+  intros b y v Hpb Hy1 Hyb Hns Hyv Hvh.
+  assert (Hc := Hu_le_cap b (length b) y).
+  assert (Hlt : Hu b (length b) y < length b).
+  { destruct (Nat.eq_dec (Hu b (length b) y) (length b)) as [E|E]; [|lia].
+    exfalso. apply Hns. apply (safe_iff_Hu b y Hpb). exact E. }
+  assert (Hlam : Hu b (length b) v <= Hu b (length b) y)
+    by (apply (Hu_laminar b (length b) y v); lia).
+  intro C. assert (E := proj1 (safe_iff_Hu b v Hpb) C). lia.
+Qed.
+
+(* so below the split an unsafe node's second-order sum is the right factor's *)
+
+Lemma BBin_lo_unsafe : forall a b y,
+  is_perm a (length a) -> is_perm b (length b) ->
+  1 <= y -> y <= length b -> ~ safe_at b y ->
+  BBin (midmax a b) (length a + S (length b)) y = BBin b (length b) y.
+Proof.
+  intros a b y Hpa Hpb Hy1 Hyb Hns.
+  assert (Hc := Hu_le_cap b (length b) y).
+  assert (Hgy : y <= Hu b (length b) y) by (apply Hu_ge; lia).
+  unfold BBin.
+  rewrite (Hu_midmax_lo_unsafe a b y Hy1 Hyb Hpb Hns).
+  apply nfold_ext_in. intros v Hv. apply in_seq in Hv.
+  assert (Hnsv : ~ safe_at b v)
+    by (apply (safe_subtree_unsafe b y v Hpb Hy1 Hyb Hns); lia).
+  apply (Bin_lo_unsafe a b v Hpa Hpb ltac:(lia) ltac:(lia) Hnsv).
+Qed.
+
+(* and above the split it is the left factor's, lifted *)
+
+Lemma BBin_hi : forall a b t,
+  is_perm a (length a) -> is_perm b (length b) -> 1 <= t -> t <= length a ->
+  BBin (midmax a b) (length a + S (length b)) (t + length b)
+  = (length b * (GGin a (length a) t + S (hgap a (length a) t))
+     + BBin a (length a) t)%nat.
+Proof.
+  intros a b t Hpa Hpb Ht1 Hta.
+  assert (Hc := Hu_le_cap a (length a) t).
+  assert (Hgt : t <= Hu a (length a) t) by (apply Hu_ge; lia).
+  unfold BBin at 1.
+  rewrite (Hu_midmax_hi a b (t + length b) Hpa Hpb ltac:(lia) ltac:(lia)).
+  replace (t + length b - length b)%nat with t by lia.
+  replace (length b + Hu a (length a) t - (t + length b))%nat
+    with (Hu a (length a) t - t) by lia.
+  replace (seq (t + length b) (S (Hu a (length a) t - t)))
+    with (map (fun s => s + length b) (seq t (S (Hu a (length a) t - t))))
+    by (rewrite seq_add_map; reflexivity).
+  rewrite (nfold_map_gen nat nat
+             (Bin (midmax a b) (length a + S (length b)))
+             (fun s => s + length b) (seq t (S (Hu a (length a) t - t)))).
+  cbn beta.
+  transitivity (fold_right (fun s acc =>
+      (length b * S (hgap a (length a) s) + Bin a (length a) s + acc)%nat)
+      0%nat (seq t (S (Hu a (length a) t - t)))).
+  - apply nfold_ext_in. intros s Hs. apply in_seq in Hs.
+    assert (Hlam : Hu a (length a) s <= Hu a (length a) t)
+      by (apply (Hu_laminar a (length a) t s); lia).
+    rewrite (Bin_hi a b s Hpa Hpb ltac:(lia) ltac:(lia)).
+    unfold hgap. reflexivity.
+  - rewrite (fold_add_split nat
+               (fun s => (length b * S (hgap a (length a) s))%nat)
+               (fun s => Bin a (length a) s)
+               (seq t (S (Hu a (length a) t - t)))).
+    cbn beta.
+    rewrite (nfold_scal nat (length b)
+               (fun s => S (hgap a (length a) s))
+               (seq t (S (Hu a (length a) t - t)))).
+    assert (Eg : fold_right (fun s acc => (S (hgap a (length a) s) + acc)%nat)
+                   0%nat (seq t (S (Hu a (length a) t - t)))
+               = (GGin a (length a) t + S (hgap a (length a) t))%nat).
+    { transitivity (fold_right (fun s acc =>
+          (hgap a (length a) s + 1 + acc)%nat) 0%nat
+          (seq t (S (Hu a (length a) t - t)))).
+      - apply nfold_ext_in. intros s _. lia.
+      - rewrite (fold_add_split nat (fun s => hgap a (length a) s)
+                   (fun _ : nat => 1%nat)
+                   (seq t (S (Hu a (length a) t - t)))).
+        cbn beta.
+        rewrite (nfold_const nat 1
+                   (seq t (S (Hu a (length a) t - t)))), length_seq.
+        unfold GGin, hgap. lia. }
+    rewrite Eg. unfold BBin. reflexivity.
+Qed.

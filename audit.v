@@ -1761,3 +1761,8 @@ Print Assumptions sccube_closed.
 Compute (map (fun M => ((sccube M + 18 * card132 (S (S M)))%nat,
                         (6 * card132 (S (S (S M))) + 7 * card132 (S M))%nat))
              (seq 0 4)).
+
+(* ---- the second-order subtree sum under the max-split ---- *)
+Print Assumptions safe_subtree_unsafe.
+Print Assumptions BBin_lo_unsafe.
+Print Assumptions BBin_hi.
