@@ -1717,3 +1717,8 @@ Print Assumptions SStot_closed.
 (* 2 SStot M = M Cat(M+1) *)
 Compute (map (fun M => ((2 * SStot M)%nat, (M * card132 (S M))%nat))
              (seq 0 5)).
+
+(* ---- the position-weighted H total ---- *)
+Print Assumptions YHw_tail.
+Print Assumptions YHw_midmax.
+Print Assumptions YHtot_expand.

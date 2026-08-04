@@ -22207,3 +22207,166 @@ Qed.
 
 Theorem SStot_closed : forall M, (2 * SStot M = M * card132 (S M))%nat.
 Proof. intro M. apply (SStot_closed_upto M M). lia. Qed.
+
+(* The position-weighted H total under the max-split. *)
+
+
+Lemma YHw_tail : forall u M,
+  YHw u M = fold_right (fun y acc => (y * Hu u M y + acc)%nat) 0%nat (seq 1 M).
+Proof.
+  intros u M. unfold YHw.
+  change (seq 0 (S M)) with (0%nat :: seq 1 M).
+  rewrite (nfold_cons nat (fun y => (y * Hu u M y)%nat) 0%nat (seq 1 M)).
+  cbn beta. lia.
+Qed.
+
+Theorem YHw_midmax : forall a b,
+  is_perm a (length a) -> is_perm b (length b) ->
+  YHw (midmax a b) (length a + S (length b))
+  = (YHw b (length b) + (length a + 1) * SSw b (length b)
+     + length b * tri (length a) + YHw a (length a)
+     + length a * (length b * length b)
+     + length b * Awp a (length a)
+     + (length a + S (length b)) * (length a + S (length b)))%nat.
+Proof.
+  intros a b Hpa Hpb.
+  assert (Plo : fold_right (fun y acc =>
+      (y * Hu (midmax a b) (length a + S (length b)) y + acc)%nat) 0%nat
+      (seq 1 (length b))
+    = (YHw b (length b) + (length a + 1) * SSw b (length b))%nat).
+  { rewrite (YHw_tail b (length b)). unfold SSw.
+    rewrite <- (nfold_scal nat (length a + 1)
+                  (fun y => if safeb b y then y else 0) (seq 1 (length b))).
+    rewrite <- (fold_add_split nat (fun y => (y * Hu b (length b) y)%nat)
+                  (fun y => ((length a + 1)
+                             * (if safeb b y then y else 0))%nat)
+                  (seq 1 (length b))).
+    apply nfold_ext_in. intros y Hy. apply in_seq in Hy.
+    destruct (safeb b y) eqn:Es.
+    - assert (Hsb : safe_at b y) by (apply safeb_spec; exact Es).
+      rewrite (Hu_midmax_lo_safe a b y ltac:(lia) ltac:(lia) Hsb).
+      assert (Eb := proj1 (safe_iff_Hu b y Hpb) Hsb). rewrite Eb. ring.
+    - assert (Hnsb : ~ safe_at b y).
+      { intro C. assert (K : safeb b y = true) by (apply safeb_spec; exact C).
+        rewrite Es in K. discriminate. }
+      rewrite (Hu_midmax_lo_unsafe a b y ltac:(lia) ltac:(lia) Hpb Hnsb).
+      ring. }
+  assert (Phi : fold_right (fun y acc =>
+      (y * Hu (midmax a b) (length a + S (length b)) y + acc)%nat) 0%nat
+      (seq (S (length b)) (length a))
+    = (length b * tri (length a) + YHw a (length a)
+       + length a * (length b * length b)
+       + length b * Awp a (length a))%nat).
+  { replace (seq (S (length b)) (length a))
+      with (map (fun t => t + length b) (seq 1 (length a)))
+      by (rewrite seq_add_map; reflexivity).
+    rewrite (nfold_map_gen nat nat
+      (fun y => (y * Hu (midmax a b) (length a + S (length b)) y)%nat)
+      (fun t => t + length b) (seq 1 (length a))).
+    cbn beta.
+    transitivity (fold_right (fun t acc =>
+        (length b * t + t * Hu a (length a) t + length b * length b
+         + length b * Hu a (length a) t + acc)%nat) 0%nat
+        (seq 1 (length a))).
+    - apply nfold_ext_in. intros t Ht. apply in_seq in Ht.
+      rewrite (Hu_midmax_hi a b (t + length b) Hpa Hpb ltac:(lia) ltac:(lia)).
+      replace (t + length b - length b)%nat with t by lia. ring.
+    - rewrite (nfold_four nat (fun t => (length b * t)%nat)
+                 (fun t => (t * Hu a (length a) t)%nat)
+                 (fun _ : nat => (length b * length b)%nat)
+                 (fun t => (length b * Hu a (length a) t)%nat)
+                 (seq 1 (length a))).
+      cbn beta.
+      rewrite (nfold_scal nat (length b) (fun t => t) (seq 1 (length a))).
+      rewrite (tri_tail (length a)).
+      rewrite (nfold_const nat (length b * length b) (seq 1 (length a))),
+              length_seq.
+      rewrite (nfold_scal nat (length b) (fun t => Hu a (length a) t)
+                 (seq 1 (length a))).
+      rewrite <- (YHw_tail a (length a)).
+      unfold Awp. ring. }
+  rewrite (YHw_tail (midmax a b) (length a + S (length b))).
+  rewrite (seq_split_hi (length a) (length b)).
+  rewrite !(nfold_app nat (fun y =>
+    (y * Hu (midmax a b) (length a + S (length b)) y)%nat)).
+  replace (seq (length a + S (length b)) 1)
+    with ((length a + S (length b)) :: nil) by reflexivity.
+  rewrite (nfold_single nat (fun y =>
+    (y * Hu (midmax a b) (length a + S (length b)) y)%nat)
+    (length a + S (length b))).
+  cbn beta. rewrite Hu_top, Plo, Phi. lia.
+Qed.
+
+Theorem YHtot_expand : forall m,
+  YHtot (S m)
+  = fold_right (fun k acc =>
+      (card132 k * YHtot (m - k)
+       + (k + 1) * card132 k * SStot (m - k)
+       + card132 (m - k) * ((m - k) * tri k * card132 k)
+       + card132 (m - k) * YHtot k
+       + card132 (m - k) * (k * ((m - k) * (m - k)) * card132 k)
+       + card132 (m - k) * ((m - k) * Awptot k)
+       + card132 (m - k) * (S m * S m * card132 k)
+       + acc)%nat) 0%nat (seq 0 (S m)).
+Proof.
+  intro m. unfold YHtot at 1.
+  rewrite (nfold_pairs132 m (fun w => YHw w (S m))).
+  apply nfold_ext_in. intros k Hk. apply in_seq in Hk. destruct Hk as [_ Hk].
+  assert (HkM : (k <= m)%nat) by lia.
+  transitivity (fold_right (fun a acc =>
+      ((YHtot (m - k) + (k + 1) * SStot (m - k)
+        + card132 (m - k) * ((m - k) * tri k)
+        + card132 (m - k) * (k * ((m - k) * (m - k)))
+        + card132 (m - k) * (S m * S m))
+       + card132 (m - k) * YHw a k
+       + card132 (m - k) * ((m - k) * Awp a k)
+       + acc)%nat) 0%nat (gen132 k)).
+  - apply nfold_ext_in. intros a Ha.
+    assert (Hpa0 : is_perm a k) by (apply gen132_perm; exact Ha).
+    assert (Hla : length a = k) by (apply (perm_len a k); exact Hpa0).
+    assert (Hpa : is_perm a (length a)) by (rewrite Hla; exact Hpa0).
+    transitivity (fold_right (fun v acc =>
+        (YHw v (m - k) + (k + 1) * SSw v (m - k)
+         + ((m - k) * tri k + YHw a k + k * ((m - k) * (m - k))
+            + (m - k) * Awp a k + S m * S m)
+         + acc)%nat) 0%nat (gen132 (m - k))).
+    + apply nfold_ext_in. intros v Hv.
+      assert (Hpv0 : is_perm v (m - k)) by (apply gen132_perm; exact Hv).
+      assert (Hlv : length v = (m - k)%nat)
+        by (apply (perm_len v (m - k)); exact Hpv0).
+      assert (Hpv : is_perm v (length v)) by (rewrite Hlv; exact Hpv0).
+      assert (K := YHw_midmax a v Hpa Hpv).
+      rewrite Hla, Hlv in K.
+      replace (k + S (m - k))%nat with (S m) in K by lia.
+      rewrite K. lia.
+    + rewrite (nfold_three (list nat) (fun v => YHw v (m - k))
+                 (fun v => ((k + 1) * SSw v (m - k))%nat)
+                 (fun _ : list nat => ((m - k) * tri k + YHw a k
+                    + k * ((m - k) * (m - k)) + (m - k) * Awp a k
+                    + S m * S m)%nat) (gen132 (m - k))).
+      cbn beta.
+      rewrite (nfold_scal (list nat) (k + 1) (fun v => SSw v (m - k))
+                 (gen132 (m - k))).
+      rewrite (nfold_const (list nat) ((m - k) * tri k + YHw a k
+                 + k * ((m - k) * (m - k)) + (m - k) * Awp a k + S m * S m)
+                 (gen132 (m - k))).
+      unfold YHtot, SStot, card132. ring.
+  - rewrite (nfold_three (list nat)
+      (fun _ : list nat => (YHtot (m - k) + (k + 1) * SStot (m - k)
+         + card132 (m - k) * ((m - k) * tri k)
+         + card132 (m - k) * (k * ((m - k) * (m - k)))
+         + card132 (m - k) * (S m * S m))%nat)
+      (fun a => (card132 (m - k) * YHw a k)%nat)
+      (fun a => (card132 (m - k) * ((m - k) * Awp a k))%nat) (gen132 k)).
+    cbn beta.
+    rewrite (nfold_const (list nat) (YHtot (m - k) + (k + 1) * SStot (m - k)
+               + card132 (m - k) * ((m - k) * tri k)
+               + card132 (m - k) * (k * ((m - k) * (m - k)))
+               + card132 (m - k) * (S m * S m)) (gen132 k)).
+    rewrite (nfold_scal (list nat) (card132 (m - k)) (fun a => YHw a k)
+               (gen132 k)).
+    rewrite (nfold_scal (list nat) (card132 (m - k))
+               (fun a => ((m - k) * Awp a k)%nat) (gen132 k)).
+    rewrite (nfold_scal (list nat) (m - k) (fun a => Awp a k) (gen132 k)).
+    unfold YHtot, Awptot, card132. ring.
+Qed.
