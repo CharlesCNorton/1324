@@ -24188,3 +24188,273 @@ Proof.
   assert (D := f_equal (Nat.mul 2) A).
   lia.
 Qed.
+
+(* Closed values for the blocks of the second-order level sum. *)
+
+
+Lemma wsum_3k1_val : forall n,
+  (2 * wsum (fun k => (3 * k + 1)%nat) n
+   = (3 * n + 2) * card132 (S n))%nat.
+Proof.
+  intro n.
+  assert (A := wsum_3k1 n).
+  assert (B := wsum_id_val n).
+  assert (C := wsum_const 1 n).
+  lia.
+Qed.
+
+Lemma wsum_kSk_val : forall n,
+  (2 * wsum (fun k => (k * S k)%nat) n + 2 * 4 ^ n
+   = (n * n + 3 * n + 2) * card132 (S n))%nat.
+Proof.
+  intro n.
+  assert (E : wsum (fun k => (k * S k)%nat) n
+            = wsum (fun k => (k * (k + 1))%nat) n)
+    by (apply wsum_ext; intros k _; ring).
+  assert (A := wsum_kk1 n).
+  assert (B := wsum_sq_val n).
+  assert (C := wsum_id_val n).
+  nia.
+Qed.
+
+Lemma wsum_SkSk_val : forall n,
+  (2 * wsum (fun k => (S k * S k)%nat) n + 2 * 4 ^ n
+   = (n * n + 4 * n + 4) * card132 (S n))%nat.
+Proof.
+  intro n.
+  assert (A := wsum_sqw n).
+  assert (B := wsum_sq_val n).
+  assert (C := wsum_id_val n).
+  assert (D := wsum_const 1 n).
+  nia.
+Qed.
+
+Lemma wsum_kkSk_val : forall n,
+  (2 * wsum (fun k => (k * k * S k)%nat) n + (3 * n + 2) * 4 ^ n
+   = (n * n * n + 4 * n * n + 5 * n + 2) * card132 (S n))%nat.
+Proof.
+  intro n.
+  assert (E : wsum (fun k => (k * k * S k)%nat) n
+            = wsum (fun k => (k * k * k + k * k)%nat) n)
+    by (apply wsum_ext; intros k _; ring).
+  rewrite E.
+  rewrite <- (wsum_add (fun k => (k * k * k)%nat) (fun k => (k * k)%nat) n).
+  assert (A := wsum_cube_val n).
+  assert (B := wsum_sq_val n).
+  assert (C := wsum_kmk_val n).
+  nia.
+Qed.
+
+Lemma wsum_SkSkmk_val : forall m,
+  (2 * wsum (fun k => (S k * S k * (m - k))%nat) m
+   + (m + 2) * (m + 2) * card132 (S m)
+   = (m + 4) * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (E : wsum (fun k => (S k * S k * (m - k))%nat) m
+            = wsum (fun k => (k * k * (m - k)
+                              + (2 * (k * (m - k)) + (m - k)))%nat) m)
+    by (apply wsum_ext; intros k _; ring).
+  rewrite E.
+  rewrite <- (wsum_add (fun k => (k * k * (m - k))%nat)
+             (fun k => (2 * (k * (m - k)) + (m - k))%nat) m).
+  rewrite <- (wsum_add (fun k => (2 * (k * (m - k)))%nat)
+             (fun k => (m - k)%nat) m).
+  rewrite (wsum_scal 2 (fun k => (k * (m - k))%nat) m).
+  assert (F : wsum (fun k => (m - k)%nat) m = wsum (fun k => k) m)
+    by (rewrite (wsum_rev (fun k => k) m); reflexivity).
+  rewrite F.
+  assert (A := wsum_kkmk_val m).
+  assert (B := wsum_kmk_val m).
+  assert (C := wsum_id_val m).
+  nia.
+Qed.
+
+Lemma Aconv_val : forall m,
+  (2 * Aconv m + S (S m) * card132 (S m) = 4 ^ (S m))%nat.
+Proof.
+  intro m. assert (A := Aconv_closed m).
+  rewrite <- (card132_binom (S m)) in A. exact A.
+Qed.
+
+Lemma Bconv_norm : forall m,
+  (2 * Bconv m + 4 * (2 * m + 1) * (S m * card132 m)
+   = (m + 1) * 4 ^ (S m))%nat.
+Proof.
+  intro m. assert (B := Bconv_val m). unfold cb in B.
+  rewrite <- (card132_binom m) in B. exact B.
+Qed.
+
+Lemma cratio : forall n,
+  (S (S n) * card132 (S n) = 2 * (2 * n + 1) * card132 n)%nat.
+Proof. exact card132_ratio. Qed.
+
+Lemma bb_B2_val : forall m,
+  (2 * conv (fun k => (S k * card132 k)%nat) TRIPtot m
+   + (m + 6) * card132 (S (S (S m)))
+   = 5 * (m + 3) * card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB2_val m).
+  assert (S1 := wsum_S_sym (S m)).
+  assert (S2 := wsum_S_sym (S (S m))).
+  assert (S3 := wsum_S_sym (S (S (S m)))).
+  assert (R := cratio (S (S (S m)))).
+  nia.
+Qed.
+
+Lemma bb_B3_val : forall m,
+  (2 * conv (fun k => (k * card132 k)%nat) (fun n => (n * Ptot n)%nat) m
+   + (4 * m + 10) * card132 (S (S (S m)))
+   + 2 * (m + 1) * card132 (S m)
+   = (10 * m + 18) * card132 (S (S m)) + 16 * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB3 m).
+  assert (K := conv_wPtot (fun k => k) m). cbn beta in K.
+  assert (L := conv_wPtot (fun k => (k * k)%nat) m). cbn beta in L.
+  assert (I1 := wsum_id_val (S m)).
+  assert (I2 := wsum_id_val (S (S m))).
+  assert (Q1 := wsum_sq_val (S m)).
+  assert (Q2 := wsum_sq_val (S (S m))).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  assert (E2 : (4 ^ (S (S m)) = 16 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma Bconv_c1 : forall m,
+  (2 * Bconv m + 2 * (m + 1) * (m + 2) * card132 (S m)
+   = 4 * (m + 1) * 4 ^ m)%nat.
+Proof.
+  intro m. assert (B := Bconv_norm m). assert (R := cratio m).
+  assert (R2 : (4 * (2 * m + 1) * (S m * card132 m)
+                = 2 * (m + 1) * (S (S m) * card132 (S m)))%nat)
+    by (rewrite R; ring).
+  assert (E : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma bb_B1_val : forall m,
+  (forall j, (j <= m)%nat -> BBCL j) ->
+  (8 * conv card132 BBwptot m + (3 * m * m + 9 * m + 6) * card132 (S m)
+   = (m * m * m + 4 * m * m + 5 * m + 2) * card132 (S m)
+     + (m + 4) * 4 ^ m)%nat.
+Proof.
+  intros m IH.
+  assert (A := conv_BB1 m IH).
+  assert (K := wsum_kSk_val m).
+  assert (L := wsum_kkSk_val m).
+  assert (B := Bconv_c1 m).
+  nia.
+Qed.
+
+Lemma bb_B12_val : forall m,
+  (forall j, (j <= m)%nat -> BBCL j) ->
+  (8 * conv BBwptot card132 m + (3 * m * m + 9 * m + 6) * card132 (S m)
+   = (m * m * m + 4 * m * m + 5 * m + 2) * card132 (S m)
+     + (m + 4) * 4 ^ m)%nat.
+Proof.
+  intros m IH.
+  assert (A := conv_BB12 m IH).
+  assert (K := wsum_kSk_val m).
+  assert (L := wsum_kkSk_val m).
+  assert (B := Bconv_c1 m).
+  nia.
+Qed.
+
+Lemma bb_B10_val : forall m,
+  (4 * conv GGwptot (fun n => (n * card132 n)%nat) m
+   + 2 * (m + 2) * (m + 2) * card132 (S m)
+   = (m + 8) * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB10_val m).
+  assert (W := wsum_SkSkmk_val m).
+  assert (V := Aconv_val m).
+  assert (B := Bconv_c1 m).
+  assert (E : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma bb_B11_val : forall m,
+  (4 * conv Ltot (fun n => (n * card132 n)%nat) m
+   + 2 * m * (m + 2) * card132 (S m) + 6 * 4 ^ m
+   = 3 * (m + 1) * (m + 2) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB11 m).
+  assert (S1 := wsum_S_sym m).
+  assert (K := wsum_kSk_val m).
+  assert (V := Aconv_val m).
+  assert (B := Bconv_c1 m).
+  assert (E : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma wsum_kk1_val : forall n,
+  (2 * wsum (fun k => (k * (k + 1))%nat) n + 2 * 4 ^ n
+   = (n * n + 3 * n + 2) * card132 (S n))%nat.
+Proof.
+  intro n.
+  assert (E : wsum (fun k => (k * (k + 1))%nat) n
+            = wsum (fun k => (k * S k)%nat) n)
+    by (apply wsum_ext; intros k _; ring).
+  rewrite E. apply wsum_kSk_val.
+Qed.
+
+Lemma bb_X31 : forall m,
+  (2 * conv (fun k => ((3 * k + 1) * card132 k)%nat) Ptot m
+   + (12 * m + 24) * card132 (S (S m))
+   = (3 * m + 8) * card132 (S (S (S m)))
+     + 2 * (3 * m + 4) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (K := conv_wPtot (fun k => (3 * k + 1)%nat) m). cbn beta in K.
+  assert (W1 := wsum_3k1_val (S m)).
+  assert (W2 := wsum_3k1_val (S (S m))).
+  nia.
+Qed.
+
+Lemma bb_Xkk1 : forall m,
+  (2 * conv (fun k => (k * (k + 1) * card132 k)%nat) Ptot m
+   + (4 * m * m + 20 * m + 24) * card132 (S (S m)) + 16 * 4 ^ m
+   = (m * m + 7 * m + 12) * card132 (S (S (S m)))
+     + 2 * (m + 1) * (m + 2) * card132 (S m))%nat.
+Proof.
+  intro m.
+  assert (K := conv_wPtot (fun k => (k * (k + 1))%nat) m). cbn beta in K.
+  assert (W1 := wsum_kk1_val (S m)).
+  assert (W2 := wsum_kk1_val (S (S m))).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  assert (E2 : (4 ^ (S (S m)) = 16 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma bb_Xa : forall m,
+  (2 * conv (fun k => 4 ^ k) Ptot m + (m + 4) * card132 (S (S (S m)))
+   = 2 * (m + 3) * card132 (S (S m)) + 8 * 4 ^ m)%nat.
+Proof.
+  intro m.
+  assert (A := conv_aPtot m).
+  assert (V1 := Aconv_val (S m)).
+  assert (V2 := Aconv_val (S (S m))).
+  assert (E1 : (4 ^ (S m) = 4 * 4 ^ m)%nat) by (simpl; ring).
+  assert (E2 : (4 ^ (S (S m)) = 16 * 4 ^ m)%nat) by (simpl; ring).
+  assert (E3 : (4 ^ (S (S (S m))) = 64 * 4 ^ m)%nat) by (simpl; ring).
+  nia.
+Qed.
+
+Lemma bb_B7_val : forall m,
+  (4 * conv Awptot Ptot m
+   + (4 * m * m + 6 * m) * card132 (S (S m)) + 8 * 4 ^ m
+   + 4 * card132 (S m)
+   = m * (m + 3) * card132 (S (S (S m)))
+     + 2 * m * m * card132 (S m) + 6 * card132 (S (S m)))%nat.
+Proof.
+  intro m.
+  assert (A := conv_BB7 m).
+  assert (X := bb_X31 m).
+  assert (Y := bb_Xkk1 m).
+  assert (Z := bb_Xa m).
+  nia.
+Qed.
